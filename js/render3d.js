@@ -156,14 +156,14 @@ const R3 = (function () {
     const light = (x, y, col, I) => { if (li >= fxLights.length) return; const l = fxLights[li++]; l.position.set(x, GROUND - y, 60); l.color.set(col); l.intensity = I; };
     for (const f of F.p) {
       const m = modelFor(f);
-      poseRobot(m.rb, f.pose, f.x, f.hipY, f.face, -0.42, F.frame / 60, f.st);
+      poseRobot(m.rb, f.pose, f.x, f.hipY, f.face, -0.42, F.frame / 60, f.st, f.z3 || 0);
       setFlash(m.rb, f.flash > 0 ? 0.9 : (f.meter >= 100 && F.frame % 20 < 10 && f.st !== 'super') ? 0.12 : 0);
       m.ghosts.forEach((g, i) => {
         const gh = f.ghosts[f.ghosts.length - 1 - i];
         g.root.visible = !!gh;
         if (gh) { poseRobot(g, gh.pose, gh.x, gh.hy, gh.face); g.gm.opacity = gh.a * 0.45; }
       });
-      if (f.st === 'super' || (F.superFreeze > 0 && F.superBy === f)) { const hp = f.wp('fha'); light(hp.x, hp.y, f.ch.accent, 2.5e4); }
+      if (f.st === 'super' || (F.superFreeze > 0 && F.superBy === f)) { const hp = f.wp('fha'); light(hp.x, hp.y, f.ch.accent, f.sp === 'moulinetLock' ? 6e3 : 2.5e4); }
       else if (f.st === 'special' && f.ghostOn) { const hp = f.wp(f.sp === 'flip' || f.sp === 'spin' ? 'ffo' : 'fha'); light(hp.x, hp.y, f.ch.accent, 1.8e4); }
       if (f.beam) light(f.beam.x + f.face * 160, f.beam.y, f.ch.accent, 6e4);
     }

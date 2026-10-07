@@ -40,6 +40,7 @@ class Fight {
     return clamp(x, lo, hi);
   }
   announce(text, dur, style = {}) { this.ann = { text, t: 0, dur, ...style }; }
+  announceMove(f, name) { this.moveTxt = { side: f.side, name, t: 0, col: f.ch.accent }; AU.say(name.replace('360', 'three sixty').replace('720', 'seven twenty'), 0.5, 1.05); }
   startSuper(f) {
     f.meter -= 100; f.setSt('super'); f.sp = f.ch.sup; f.inv = 999; f.hitN = 0; f.hitCD = 0; f.connected = false; f.vx = 0; f.beam = null;
     this.superFreeze = 62; this.superBy = f;
@@ -100,8 +101,14 @@ class Fight {
           let mv = hb.mv;
           const last = a.hitN + 1 >= (mv.hits || 1);
           if (mv === SPECIAL_MV.storm && last) mv = { ...mv, dmg: 90, kd: true, launch: -12, drag: false, kb: 8 };
-          const res = this.applyHit(a, d, pt, mv);
+          const isMoul = a.st === 'super' && a.sp === 'moulinet';
+          const res = this.applyHit(a, d, pt, mv, !isMoul);
           a.hitN++; a.hitCD = mv.every || 999; a.connected = true;
+          if (isMoul && res === 'hit') { // prise en ciseaux inversée : la cible est verrouillée
+            a.sp = 'moulinetLock'; a.t = 0; a.lockX = d.x; a.vx = 0; a.vy = 0;
+            d.setSt('held'); d.inv = 999; d.vx = 0; d.vy = 0; d.push = 0; d.heldHipY = null; d.heldPose = POSES.hit; d.z3 = 0; d.y = GROUND; d.face = -a.face;
+            this.flash = 4; this.shake = 10; this.announceMove(a, 'MOULINET 720');
+          }
           if (a.st === 'super' && a.sp === 'rush' && res === 'hit') {
             a.sp = 'barrage'; a.t = 0; a.vx = 0; d.setSt('hit'); d.stun = 999; d.push = 0;
             this.flash = 4; this.shake = 10;
@@ -146,6 +153,7 @@ class Fight {
     const [a, b] = this.p;
     if (['down', 'getup'].includes(a.st) || ['down', 'getup'].includes(b.st)) return;
     if (a.st === 'super' && a.sp === 'barrage' || b.st === 'super' && b.sp === 'barrage') return;
+    if ([a, b].some(f => f.st === 'throw' || f.st === 'held' || (f.st === 'super' && f.sp === 'moulinetLock'))) return;
     const minD = 46 * (a.ch.scale + b.ch.scale) / 2;
     const dx = b.x - a.x, ady = Math.abs(a.y - b.y);
     if (Math.abs(dx) < minD && ady < 110) {
@@ -163,6 +171,7 @@ class Fight {
     this.frame++;
     for (const k in this.combo) if (this.combo[k] && ++this.combo[k].t > 70) this.combo[k] = null;
     if (this.ann) this.ann.t++;
+    if (this.moveTxt && ++this.moveTxt.t > 80) this.moveTxt = null;
     if (this.flash > 0) this.flash--;
     this.shake *= 0.86; if (this.shake < 0.3) this.shake = 0;
     FX.update();
@@ -260,6 +269,8 @@ class Fight {
     const sb = this.superFreeze > 0 ? this.superBy : null;
     const mid = (this.p[0].x + this.p[1].x) / 2;
     if (sb) { const k = easeOut(clamp((62 - this.superFreeze) / 10, 0, 1)); return { zoom: 1.24, orbit: 0.13 * sb.face * k, roll: 0.03 * sb.face * k, lift: 0.025 * k, fx: sb.x, fy: sb.hipY - 40 }; }
+    const th = this.p.find(f => f.st === 'throw' || (f.st === 'super' && f.sp === 'moulinetLock'));
+    if (th) { const w = Math.sin(th.t * 0.035); return { zoom: 1.1, orbit: 0.12 * th.face * w, roll: 0.02 * th.face * w, lift: 0.02, fx: th.x, fy: GROUND - 130 }; }
     if (this.phase === 'ko' && this.phaseT < 110) { const l = this.p.find(f => f.ko) || this.p[0]; return { zoom: 1.14, orbit: -0.1 * l.face, roll: -0.02 * l.face, lift: 0.03, fx: l.x, fy: l.hipY - 30 }; }
     if (this.phase === 'intro' && this.phaseT < 110) { const k = 1 - easeOut(clamp(this.phaseT / 110, 0, 1)); return { zoom: 1 + 0.12 * k, orbit: 0.11 * k, roll: 0, lift: 0.02 * k, fx: mid, fy: GROUND - 100 }; }
     return { zoom: 1, orbit: 0, roll: 0, lift: 0, fx: mid, fy: GROUND - 100 };
@@ -469,6 +480,12 @@ class Fight {
       if (f.meter >= 100) txt('SUPER', left ? 312 : W - 312, H - 46, 15, { font: FONT_BIG, align: left ? 'right' : 'left', color: this.frame % 16 < 8 ? '#ff6a3a' : '#ffd25a', stroke: '#1a0500', sw: 4 });
     };
     meter(a, true); meter(b, false);
+    // nom de la prise en cours
+    if (this.moveTxt) {
+      const m = this.moveTxt, k = easeOut(clamp(m.t / 8, 0, 1)), al = m.t > 65 ? (80 - m.t) / 15 : 1, left = m.side === 0;
+      const x = left ? lerp(-200, 40, k) : lerp(W + 200, W - 40, k);
+      txt(m.name, x, 300, 34, { font: FONT_BIG, italic: true, align: left ? 'left' : 'right', grad: ['#ffffff', '#ffe9a0', m.col], stroke: '#0b0d12', sw: 7, glow: m.col, blur: 16, alpha: al });
+    }
     // combos
     for (let i = 0; i < 2; i++) {
       const cb = this.combo[i]; if (!cb) continue;
@@ -534,23 +551,33 @@ function moveRows(ch) {
     [ch.supName + ' (SUPER)', '↓↘→ ↓↘→ + P', 'SUPER']
   ];
 }
+// liste complète : spéciaux + projection + coups de pied de boxe française / MMA
+function moveRowsFull(ch) {
+  return moveRows(ch).concat([
+    [(ch.throwName || 'PROJECTION') + ' (prise)', '→ ou ← + HP au contact', ''],
+    ['CHASSÉ FRONTAL', '→ + LK', ''],
+    ['COUP DE PIED RETOURNÉ', '→ + HK', ''],
+    ['GENOU SAUTÉ', '→ + HP (à distance)', ''],
+    ['FOUETTÉ / HIGH KICK / LOW KICK / BALAYAGE', 'LK / HK / ↓+LK / ↓+HK', '']
+  ]);
+}
 function drawMoveList(c, ch1, ch2) {
   const list = ch2 ? [ch1, ch2] : [ch1];
   list.forEach((ch, i) => {
-    const x0 = list.length === 1 ? W / 2 - 320 : 30 + i * 470, w = list.length === 1 ? 640 : 440;
-    c.fillStyle = 'rgba(10,14,30,.9)'; c.fillRect(x0, 90, w, 330); c.strokeStyle = ch.accent; c.lineWidth = 2; c.strokeRect(x0, 90, w, 330);
-    c.drawImage(portrait(ch, 64), x0 + 14, 104);
-    txt(ch.name, x0 + 92, 122, 16, { align: 'left', color: ch.accent });
-    txt(ch.maker, x0 + 92, 150, 10, { align: 'left', color: '#aaa' });
-    moveRows(ch).forEach((r, j) => {
-      const y = 205 + j * 64;
-      txt(r[0], x0 + 20, y, 12, { align: 'left', color: '#ffd23a' });
-      txt(r[1], x0 + 20, y + 24, 14, { align: 'left', color: '#fff', font: FONT_BIG });
-      txt('ou ' + r[2], x0 + w - 20, y + 24, 10, { align: 'right', color: '#9be7ff' });
+    const x0 = list.length === 1 ? W / 2 - 330 : 20 + i * 470, w = list.length === 1 ? 660 : 450;
+    c.fillStyle = 'rgba(10,14,30,.92)'; c.fillRect(x0, 56, w, 410); c.strokeStyle = ch.accent; c.lineWidth = 2; c.strokeRect(x0, 56, w, 410);
+    c.drawImage(portrait(ch, 56), x0 + 12, 66);
+    txt(ch.name, x0 + 80, 84, 16, { align: 'left', color: ch.accent });
+    txt(ch.maker, x0 + 80, 108, 10, { align: 'left', color: '#aaa' });
+    moveRowsFull(ch).forEach((r, j) => {
+      const y = 146 + j * 40;
+      txt(r[0], x0 + 16, y, 10, { align: 'left', color: j < 3 ? '#ffd23a' : '#9be7ff' });
+      txt(r[1], x0 + 16, y + 17, 13, { align: 'left', color: '#fff', font: FONT_BIG });
+      if (r[2]) txt('ou ' + r[2], x0 + w - 16, y + 17, 9, { align: 'right', color: '#9be7ff' });
     });
   });
-  txt('La SUPER nécessite la jauge pleine', W / 2, 444, 10, { color: '#ff9de0' });
-  txt('Appuyez pour revenir', W / 2, 480, 10, { color: '#aaa', alpha: (gFrame % 60 < 40) ? 1 : 0.3 });
+  txt('La SUPER nécessite la jauge pleine', W / 2, 482, 10, { color: '#ff9de0' });
+  txt('Appuyez pour revenir', W / 2, 506, 10, { color: '#aaa', alpha: (gFrame % 60 < 40) ? 1 : 0.3 });
 }
 
 /* =================== ÉCRAN TITRE =================== */
@@ -630,7 +657,8 @@ class ControlsScene {
     col(335, 'JOUEUR 2', [['Déplacement', 'FLÈCHES'], ['Poing léger', 'K'], ['Poing fort', 'L'], ['Pied léger', ','], ['Pied fort', '.'], ['Spécial 1', 'I'], ['Spécial 2', 'O'], ['SUPER', 'P'], ['(En 1 joueur', 'les 2 marchent)']], '#4fb4ff');
     col(650, 'MANETTE / TACTILE', [['Déplacement', 'Croix / stick'], ['Poings', 'X / Y'], ['Pieds', 'A / B'], ['Spéciaux', 'LB / RB'], ['SUPER', 'LT / RT'], ['Pause', 'START'], ['', ''], ['Mobile', 'joystick +'], ['', 'boutons à l\'écran']], '#ffd23a');
     txt('Sauter : HAUT  ·  S\'accroupir : BAS  ·  Garde : reculer', W / 2, 446, 10, { color: '#9be7ff' });
-    txt('Manipulations : ↓↘→+P  (boule)   →↓↘+P (dragon)   ↓↙←+K/P   ↓↘→↓↘→+P (SUPER)', W / 2, 472, 9, { color: '#ffd23a' });
+    txt('Manipulations : ↓↘→+P  (boule)   →↓↘+P (dragon)   ↓↙←+K/P   ↓↘→↓↘→+P (SUPER)', W / 2, 466, 9, { color: '#ffd23a' });
+    txt('Prise : →/← + HP au contact   ·   Chassé : → + LK   ·   Retourné : → + HK   ·   Genou sauté : → + HP', W / 2, 486, 9, { color: '#9be7ff' });
     txt('Appuyez pour revenir', W / 2, 510, 10, { color: '#888', alpha: this.t % 60 < 40 ? 1 : 0.3 });
   }
 }
@@ -648,7 +676,9 @@ function drawGridBg(c, t, col) {
 const PUPPET_SEQ = {
   enter: [['crouch', 0, { yaw: -1.3, dx: -40 }], ['idle', 14, { yaw: -0.42 }], ['lp', 5, { fx: 'whiff' }], ['idle', 6], ['lp', 5, { fx: 'whiff' }], ['hp', 6, { fx: 'whiffH' }], ['idle', 14]],
   combo: [['lp', 5, { fx: 'whiff' }], ['idle', 5], ['lp', 5, { fx: 'whiff' }], ['hp', 6, { fx: 'whiffH' }], ['idle', 6], ['hk', 9, { fx: 'whiffH' }], ['hk', 8], ['idle', 12]],
-  kick: [['crouch', 7], ['chk', 7, { fx: 'whiffH' }], ['chk', 6], ['idle', 10], ['lk', 6, { fx: 'whiff' }], ['hk', 9, { fx: 'whiffH' }], ['hk', 6], ['idle', 12]],
+  kick: [['kChamber', 5], ['fouette', 4, { fx: 'whiff' }], ['fouette', 6], ['kChamber', 5], ['idle', 8], ['rkChamber', 6], ['rkHigh', 6, { fx: 'whiffH' }], ['rkHigh', 8], ['rkChamber', 7], ['idle', 10]],
+  backkick: [['teepChamber', 5], ['teep', 4, { fx: 'whiff' }], ['teep', 6], ['idle', 8], ['backTurn', 6, { spin: 2.2 }], ['backKick', 5, { spin: 3.14, fx: 'whiffH' }], ['backKick', 8, { spin: 3.14 }], ['backTurn', 8, { spin: 4.6 }], ['idle', 9, { spin: 6.28 }]],
+  contort: [[{ ...POSES.idle }, 2], [{ ...POSES.idle, headSpin: Math.PI * 2 }, 22], [{ ...POSES.liftOver }, 10], [{ ...POSES.liftOver, twist: Math.PI * 4, headSpin: -Math.PI * 2 }, 40, { fx: 'charge' }], [{ ...POSES.contort }, 14, { fx: 'burst' }], [{ ...POSES.contort, twist: Math.PI }, 12], ['idle', 18]],
   special: [['projWind', 14, { fx: 'charge' }], ['proj', 6, { fx: 'fire' }], ['proj', 24], ['idle', 14]],
   uppercut: [['crouch', 8, { fx: 'charge' }], ['upper', 9, { dy: 70, fx: 'rise' }], ['upper', 9, { dy: 80 }], ['jump', 10, { dy: 25 }], ['crouch', 6], ['idle', 10]],
   flip: [['crouch', 8, { fx: 'charge' }], [{ ...POSES.flip, rot: -170 }, 9, { dy: 70, fx: 'rise' }], [{ ...POSES.flip, rot: -350 }, 9, { dy: 55 }], ['crouch', 8], ['idle', 10]],
@@ -686,7 +716,7 @@ class Puppet {
     const pa = P(prev[0]), pb = P(cur[0]);
     const pose = lerpPose(pa, pb, k);
     const L = key => lerp(opt(prev, key, key === 'yaw' ? -0.42 : 0), opt(cur, key, key === 'yaw' ? -0.42 : 0), k);
-    pose.spin = L('spin');
+    pose.spin = (pose.spin || 0) + L('spin');
     return { pose, yaw: L('yaw'), dx: L('dx'), dy: L('dy') };
   }
 }
@@ -705,7 +735,7 @@ function puppetFx(kind, ch, x, footY, sc, face) {
   else if (kind === 'burst') { AU.sfx('hitS'); explosion(x, footY - 110 * sc, ch.accent, 1.3); }
 }
 function sayName(ch) { AU.say(ch.name.replace('02', 'zero two').replace('H1', 'H one'), 0.6, 0.95); }
-const DEMOS = ch => ['combo', 'special', ch.move === 'uppercut' ? 'uppercut' : ch.move, 'kick', 'taunt'];
+const DEMOS = ch => (ch.id === 'atlas' ? ['contort'] : []).concat(['combo', 'special', ch.move === 'uppercut' ? 'uppercut' : ch.move, 'kick', 'backkick', 'taunt']);
 
 /* =================== SÉLECTION =================== */
 class SelectScene {

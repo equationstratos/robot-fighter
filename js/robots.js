@@ -7,49 +7,49 @@ const ROSTER = [
     body: '#eef0f3', trim: '#17191e', joint: '#2b2e35', accent: '#3fa9ff', visor: '#07080b', head: 'optimus',
     scale: 1.0, leg: 1.0, bulk: 1.0, chest: 1.0, speed: 1.0, power: 1.0, stage: 0,
     proj: { name: 'PLASMA SHOT', style: 'orb', color: '#3fa9ff', core: '#e8f6ff' },
-    move: 'uppercut', moveName: 'RISING DYNAMO', sup: 'beam', supName: 'GIGA PLASMA CANNON',
+    move: 'uppercut', moveName: 'RISING DYNAMO', sup: 'beam', supName: 'GIGA PLASMA CANNON', throwType: 'suplex', throwName: 'SUPLEX ALLEMAND',
     bio: 'Le robot humanoïde de Tesla. Mains à 22 degrés de liberté, précision chirurgicale.' },
   { id: 'atlas', name: 'ATLAS', full: 'Atlas électrique', maker: 'BOSTON DYNAMICS', country: 'USA', year: 2024,
     body: '#bfc4cb', trim: '#5e636b', joint: '#1c1d21', accent: '#ffb43a', visor: '#08090b', head: 'atlas', metal: true,
     scale: 1.03, leg: 1.0, bulk: 1.15, chest: 1.12, speed: 0.95, power: 1.12, stage: 3,
     proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#ffb43a', core: '#fff3d6' },
-    move: 'flip', moveName: 'PARKOUR FLIP', sup: 'storm', supName: 'BACKFLIP TEMPEST',
-    bio: 'Le nouvel Atlas 100 % électrique. Aluminium, tête à anneau lumineux et articulations à 360°.' },
+    move: 'flip', moveName: 'PARKOUR FLIP', sup: 'moulinet', supName: 'MOULINET 720', throwType: 'helix', throwName: 'TORSION 360',
+    bio: 'Le nouvel Atlas 100 % électrique. Ses moteurs tournent à 360° : contorsions et prises impossibles pour un humain.' },
   { id: 'figure', name: 'FIGURE 02', full: 'Figure 02', maker: 'FIGURE AI', country: 'USA', year: 2024,
     body: '#3b3e44', trim: '#141518', joint: '#2a2c31', accent: '#e8f4ff', visor: '#030304', head: 'figure',
     scale: 1.0, leg: 1.02, bulk: 0.98, chest: 1.0, speed: 1.08, power: 0.96, stage: 0,
     proj: { name: 'NEURAL PULSE', style: 'orb', color: '#9be7ff', core: '#ffffff' },
-    move: 'rush', moveName: 'HELIX RUSH', sup: 'rush', supName: 'OMEGA PROTOCOL',
+    move: 'rush', moveName: 'HELIX RUSH', sup: 'rush', supName: 'OMEGA PROTOCOL', throwType: 'takedown', throwName: 'DOUBLE-LEG SLAM',
     bio: 'Noir mat, cerveau IA embarqué. Rapide et calculateur.' },
   { id: 'asimo', name: 'ASIMO', full: 'ASIMO', maker: 'HONDA', country: 'JAPON', year: 2000,
     body: '#f6f6f2', trim: '#c9c9c4', joint: '#3c3f46', accent: '#ff4b4b', visor: '#0b0c10', head: 'asimo',
     scale: 0.86, leg: 0.95, bulk: 1.12, chest: 1.08, speed: 1.05, power: 0.92, stage: 2,
     proj: { name: 'DREAM BEAM', style: 'orb', color: '#ff4b4b', core: '#ffe6e6' },
-    move: 'spin', moveName: 'TORNADO STEP', sup: 'beam', supName: 'FUTURE LEGEND',
+    move: 'spin', moveName: 'TORNADO STEP', sup: 'beam', supName: 'FUTURE LEGEND', throwType: 'judo', throwName: 'O-GOSHI',
     bio: 'La légende japonaise, pionnier des robots marcheurs depuis 2000.' },
   { id: 'h1', name: 'UNITREE H1', full: 'H1', maker: 'UNITREE', country: 'CHINE', year: 2023,
     body: '#3a3d44', trim: '#1a1b1f', joint: '#5a5e66', accent: '#4dff88', visor: '#050506', head: 'h1',
     scale: 1.06, leg: 1.08, bulk: 0.9, chest: 0.92, speed: 1.15, power: 0.95, stage: 2,
     proj: { name: 'VOLT SPHERE', style: 'orb', color: '#4dff88', core: '#eafff1' },
-    move: 'rush', moveName: 'SPEED RECORD', sup: 'rush', supName: 'HYPERSPEED BARRAGE',
+    move: 'rush', moveName: 'SPEED RECORD', sup: 'rush', supName: 'HYPERSPEED BARRAGE', throwType: 'takedown', throwName: 'DOUBLE-LEG SLAM',
     bio: 'Détenteur du record de vitesse des humanoïdes : 3,3 m/s.' },
   { id: 'ameca', name: 'AMECA', full: 'Ameca', maker: 'ENGINEERED ARTS', country: 'UK', year: 2021,
     body: '#9aa0a8', trim: '#54585f', joint: '#2a2c30', accent: '#b26bff', visor: '#8c929a', head: 'ameca',
     scale: 0.98, leg: 1.0, bulk: 0.95, chest: 0.98, speed: 0.98, power: 1.02, stage: 1,
     proj: { name: 'MIND WAVE', style: 'wave', color: '#b26bff', core: '#f3e8ff' },
-    move: 'uppercut', moveName: 'UNCANNY UPPER', sup: 'beam', supName: 'EXPRESSION OVERLOAD',
+    move: 'uppercut', moveName: 'UNCANNY UPPER', sup: 'beam', supName: 'EXPRESSION OVERLOAD', throwType: 'judo', throwName: 'O-GOSHI',
     bio: 'Le visage le plus expressif du monde. Son regard vous déstabilise.' },
   { id: 'digit', name: 'DIGIT', full: 'Digit', maker: 'AGILITY ROBOTICS', country: 'USA', year: 2023,
     body: '#1fa39c', trim: '#17181c', joint: '#b9bec6', accent: '#3cc8ff', visor: '#0b0c0e', head: 'digit',
     scale: 1.0, leg: 1.1, bulk: 0.95, chest: 1.05, speed: 1.02, power: 1.05, stage: 1, revKnee: true,
     proj: { name: 'CARGO LAUNCH', style: 'box', color: '#ff9d1c', core: '#ffe2b8' },
-    move: 'spin', moveName: 'OSTRICH KICK', sup: 'storm', supName: 'WAREHOUSE STAMPEDE',
+    move: 'spin', moveName: 'OSTRICH KICK', sup: 'storm', supName: 'WAREHOUSE STAMPEDE', throwType: 'takedown', throwName: 'CARGO SLAM',
     bio: 'Jambes d\'autruche, genoux inversés. Le roi de l\'entrepôt.' },
   { id: 'apollo', name: 'APOLLO', full: 'Apollo', maker: 'APPTRONIK', country: 'USA', year: 2023,
     body: '#e9e6df', trim: '#2c2f36', joint: '#3e424a', accent: '#ff6a2b', visor: '#121419', head: 'apollo',
     scale: 1.02, leg: 1.0, bulk: 1.08, chest: 1.1, speed: 0.92, power: 1.15, stage: 3,
     proj: { name: 'IGNITION ORB', style: 'orb', color: '#ff6a2b', core: '#fff0e0' },
-    move: 'uppercut', moveName: 'LIFT-OFF', sup: 'storm', supName: 'SATURN V STRIKE',
+    move: 'uppercut', moveName: 'LIFT-OFF', sup: 'storm', supName: 'SATURN V STRIKE', throwType: 'suplex', throwName: 'SUPLEX ALLEMAND',
     bio: 'Né des recherches de la NASA. Force brute et fiabilité.' }
 ];
 
@@ -58,8 +58,8 @@ const ROSTER = [
    fs/fe : épaule/coude bras avant ; bs/be : bras arrière (0 = vers le bas, 90 = vers l'avant)
    fh/fk : hanche/genou jambe avant ; bh/bk : jambe arrière
    rot : rotation du corps entier ; sx : échelle horizontale (rotation sur soi-même) */
-const PKEYS = ['lean', 'hd', 'fs', 'fe', 'bs', 'be', 'fh', 'fk', 'bh', 'bk', 'rot', 'sx', 'grip'];
-function mkPose(o) { const p = { lean: 0, hd: 0, fs: 0, fe: 0, bs: 0, be: 0, fh: 0, fk: 0, bh: 0, bk: 0, rot: 0, sx: 1, grip: 1 }; return Object.assign(p, o); }
+const PKEYS = ['lean', 'hd', 'fs', 'fe', 'bs', 'be', 'fh', 'fk', 'bh', 'bk', 'rot', 'sx', 'grip', 'spin', 'twist', 'headSpin'];
+function mkPose(o) { const p = { lean: 0, hd: 0, fs: 0, fe: 0, bs: 0, be: 0, fh: 0, fk: 0, bh: 0, bk: 0, rot: 0, sx: 1, grip: 1, spin: 0, twist: 0, headSpin: 0 }; return Object.assign(p, o); }
 const POSES = {
   idle: mkPose({ lean: 8, hd: -4, fs: 50, fe: 100, bs: 28, be: 118, fh: 24, fk: 30, bh: -20, bk: 22 }),
   crouch: mkPose({ lean: 26, hd: -18, fs: 55, fe: 110, bs: 35, be: 115, fh: 78, fk: 125, bh: 22, bk: 128 }),
@@ -90,7 +90,33 @@ const POSES = {
   rush: mkPose({ lean: 40, hd: -15, fs: 96, fe: 0, bs: -20, be: 60, fh: 50, fk: 20, bh: -55, bk: 10 }),
   win: mkPose({ lean: -4, hd: 10, fs: 168, fe: 15, bs: 30, be: 140, fh: 12, fk: 10, bh: -12, bk: 6 }),
   win2: mkPose({ lean: 0, hd: 6, fs: 95, fe: 130, bs: 95, be: 130, fh: 15, fk: 10, bh: -15, bk: 8, grip: 0.3 }),
-  taunt: mkPose({ lean: -6, hd: 15, fs: 175, fe: 5, bs: 165, be: 10, fh: 10, fk: 10, bh: -10, bk: 8, grip: 0 })
+  taunt: mkPose({ lean: -6, hd: 15, fs: 175, fe: 5, bs: 165, be: 10, fh: 10, fk: 10, bh: -10, bk: 8, grip: 0 }),
+  // ---- coups de pied façon boxe française / MMA (armé → extension → réarmé) ----
+  kChamber: mkPose({ lean: 2, hd: -6, fs: 55, fe: 100, bs: 35, be: 115, fh: 100, fk: 122, bh: -8, bk: 12, spin: 0.35 }),
+  fouette: mkPose({ lean: -16, hd: -2, fs: 65, fe: 95, bs: 20, be: 120, fh: 96, fk: 4, bh: -6, bk: 8, spin: 0.55 }),
+  rkChamber: mkPose({ lean: 0, hd: -4, fs: 60, fe: 95, bs: 10, be: 100, fh: 10, fk: 18, bh: 105, bk: 125, spin: 0.7 }),
+  rkHigh: mkPose({ lean: -34, hd: 4, fs: 80, fe: 110, bs: -35, be: 15, fh: 6, fk: 10, bh: 128, bk: 4, spin: 1.0 }),
+  teepChamber: mkPose({ lean: -2, hd: -4, fs: 55, fe: 100, bs: 30, be: 115, fh: 108, fk: 125, bh: -10, bk: 15 }),
+  teep: mkPose({ lean: -22, hd: 0, fs: 60, fe: 105, bs: 35, be: 110, fh: 88, fk: 2, bh: -14, bk: 10 }),
+  backTurn: mkPose({ lean: 10, hd: 0, fs: 40, fe: 100, bs: 40, be: 100, fh: 10, fk: 20, bh: 30, bk: 110 }),
+  backKick: mkPose({ lean: 35, hd: -10, fs: 30, fe: 110, bs: 30, be: 110, fh: 15, fk: 15, bh: -95, bk: 0 }),
+  knee: mkPose({ lean: 10, hd: -10, fs: 70, fe: 110, bs: 60, be: 100, fh: 125, fk: 150, bh: -20, bk: 30 }),
+  clkMMA: mkPose({ lean: 18, hd: -10, fs: 55, fe: 105, bs: 35, be: 110, fh: 70, fk: 8, bh: 25, bk: 120 }),
+  chkSpin: mkPose({ lean: 40, hd: -10, fs: 30, fe: 60, bs: 10, be: 60, fh: 75, fk: 130, bh: -92, bk: 0 }),
+  jhkT: mkPose({ lean: -15, hd: 0, fs: 80, fe: 80, bs: 30, be: 100, fh: 100, fk: 4, bh: 40, bk: 120 }),
+  // ---- prises / projections ----
+  grab: mkPose({ lean: 15, hd: -5, fs: 85, fe: 35, bs: 80, be: 40, fh: 30, fk: 30, bh: -25, bk: 15, grip: 0.6 }),
+  liftOver: mkPose({ lean: -12, hd: -20, fs: 170, fe: 20, bs: 165, be: 25, fh: 15, fk: 25, bh: -15, bk: 20 }),
+  bridge: mkPose({ lean: -120, hd: -40, fs: 200, fe: 10, bs: 200, be: 10, fh: 20, fk: 60, bh: -10, bk: 70 }),
+  hipLoad: mkPose({ lean: 45, hd: -10, fs: 60, fe: 60, bs: 100, be: 40, fh: 30, fk: 45, bh: -20, bk: 30 }),
+  hipThrow: mkPose({ lean: 70, hd: -10, fs: 40, fe: 30, bs: 120, be: 30, fh: 35, fk: 50, bh: -25, bk: 20 }),
+  shoot: mkPose({ lean: 65, hd: -20, fs: 100, fe: 40, bs: 95, be: 45, fh: 85, fk: 110, bh: -40, bk: 30 }),
+  carry: mkPose({ lean: 15, hd: -10, fs: 150, fe: 60, bs: 140, be: 70, fh: 25, fk: 30, bh: -20, bk: 20 }),
+  slamFwd: mkPose({ lean: 60, hd: -10, fs: 110, fe: 10, bs: 110, be: 10, fh: 70, fk: 90, bh: -10, bk: 40 }),
+  // ---- Atlas : contorsions permises par ses moteurs à rotation continue ----
+  contort: mkPose({ lean: -175, hd: -60, fs: 200, fe: 0, bs: 200, be: 0, fh: 10, fk: -45, bh: -10, bk: -45 }),
+  handstand: mkPose({ lean: 0, hd: 0, fs: 180, fe: 0, bs: 180, be: 0, fh: 55, fk: 10, bh: -55, bk: 10, rot: -180, grip: 0 }),
+  scissor: mkPose({ lean: 0, hd: 0, fs: 180, fe: 0, bs: 180, be: 0, fh: 25, fk: 60, bh: -25, bk: 60, rot: -180, grip: 0 })
 };
 function lerpPose(a, b, t) { const o = {}; for (const k of PKEYS) o[k] = a[k] + (b[k] - a[k]) * t; return o; }
 

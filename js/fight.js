@@ -2,20 +2,54 @@
 /* =========================================================
    COMBAT : combattants, coups, coups spéciaux, super, effets, IA, HUD
    ========================================================= */
+// keys : [frame, pose (nom ou objet), options {spin, twist, headSpin}] — animation armé → extension → réarmé
 const NORMALS = {
-  lp: { pose: 'lp', st: 4, ac: 3, rc: 8, dmg: 35, hs: 14, bs: 9, limb: 'fha', r: 15, kb: 5, lvl: 1, cancel: true },
-  hp: { pose: 'hp', st: 7, ac: 4, rc: 17, dmg: 85, hs: 20, bs: 14, limb: 'bha', r: 19, kb: 9, lvl: 2, cancel: true },
-  lk: { pose: 'lk', st: 5, ac: 4, rc: 11, dmg: 45, hs: 15, bs: 9, limb: 'ffo', r: 17, kb: 6, lvl: 1, cancel: true },
-  hk: { pose: 'hk', st: 9, ac: 5, rc: 20, dmg: 95, hs: 21, bs: 14, limb: 'ffo', r: 21, kb: 10, lvl: 2 },
+  lp: { pose: 'lp', st: 4, ac: 3, rc: 8, dmg: 35, hs: 14, bs: 9, limb: 'fha', r: 15, kb: 5, lvl: 1, cancel: true,
+    keys: [[0, 'idle'], [3, 'lp', { twist: 0.25 }], [7, 'lp', { twist: 0.25 }], [15, 'idle']] },
+  hp: { pose: 'hp', st: 7, ac: 4, rc: 17, dmg: 85, hs: 20, bs: 14, limb: 'bha', r: 19, kb: 9, lvl: 2, cancel: true,
+    keys: [[0, 'idle'], [5, 'hp', { twist: -0.55 }], [11, 'hp', { twist: -0.55 }], [28, 'idle']] },
+  // fouetté médian (boxe française) : armé du genou, rotation de hanche, frappe de la pointe
+  lk: { pose: 'fouette', st: 6, ac: 4, rc: 8, dmg: 48, hs: 15, bs: 9, limb: 'ffo', r: 18, kb: 6, lvl: 1, cancel: true, name: 'FOUETTÉ',
+    keys: [[0, 'idle'], [4, 'kChamber'], [6, 'fouette'], [10, 'fouette'], [14, 'kChamber'], [18, 'idle']] },
+  // high kick de la jambe arrière (MMA) : pivot, armé, extension haute, bras de balancier
+  hk: { pose: 'rkHigh', st: 10, ac: 5, rc: 14, dmg: 100, hs: 21, bs: 14, limb: 'bfo', r: 22, kb: 11, lvl: 2, name: 'HIGH KICK',
+    keys: [[0, 'idle'], [5, 'rkChamber'], [10, 'rkHigh'], [15, 'rkHigh'], [21, 'rkChamber'], [29, 'idle']] },
   clp: { pose: 'clp', base: 'crouch', st: 4, ac: 3, rc: 8, dmg: 30, hs: 13, bs: 8, limb: 'fha', r: 15, kb: 5, lvl: 1, cancel: true },
   chp: { pose: 'chp', base: 'crouch', st: 6, ac: 6, rc: 18, dmg: 80, hs: 20, bs: 13, limb: 'fha', r: 24, kb: 7, lvl: 2, cancel: true },
-  clk: { pose: 'clk', base: 'crouch', st: 5, ac: 3, rc: 10, dmg: 35, hs: 13, bs: 8, limb: 'ffo', r: 16, kb: 5, lvl: 1, h: 'low', cancel: true },
-  chk: { pose: 'chk', base: 'crouch', st: 8, ac: 5, rc: 24, dmg: 90, hs: 20, bs: 14, limb: 'ffo', r: 20, kb: 6, lvl: 2, h: 'low', kd: true, launch: -4 },
+  // low kick (MMA) dans le mollet
+  clk: { pose: 'clkMMA', base: 'crouch', st: 6, ac: 3, rc: 11, dmg: 38, hs: 13, bs: 8, limb: 'ffo', r: 17, kb: 5, lvl: 1, h: 'low', cancel: true, name: 'LOW KICK',
+    keys: [[0, 'crouch'], [6, 'clkMMA', { spin: 0.5 }], [9, 'clkMMA', { spin: 0.5 }], [20, 'crouch']] },
+  // balayage retourné : rotation complète au ras du sol, jambe arrière tendue
+  chk: { pose: 'chkSpin', base: 'crouch', st: 8, ac: 6, rc: 22, dmg: 90, hs: 20, bs: 14, limb: 'bfo', r: 22, kb: 6, lvl: 2, h: 'low', kd: true, launch: -4, name: 'BALAYAGE',
+    keys: [[0, 'crouch'], [7, 'chkSpin', { spin: 2.4 }], [11, 'chkSpin', { spin: 3.14 }], [15, 'chkSpin', { spin: 3.9 }], [24, 'crouch', { spin: 6.28 }], [36, 'crouch', { spin: 6.28 }]] },
   jlp: { pose: 'jp', base: 'jump', st: 4, ac: 30, rc: 0, dmg: 45, hs: 16, bs: 10, limb: 'fha', r: 18, kb: 4, lvl: 1, h: 'high' },
   jhp: { pose: 'jp', base: 'jump', st: 6, ac: 20, rc: 0, dmg: 85, hs: 22, bs: 14, limb: 'fha', r: 21, kb: 6, lvl: 2, h: 'high' },
+  // chassé sauté (coup de pied latéral en l'air)
   jlk: { pose: 'jk', base: 'jump', st: 4, ac: 30, rc: 0, dmg: 50, hs: 16, bs: 10, limb: 'ffo', r: 19, kb: 4, lvl: 1, h: 'high' },
-  jhk: { pose: 'jhk', base: 'jump', st: 6, ac: 20, rc: 0, dmg: 90, hs: 22, bs: 14, limb: 'ffo', r: 22, kb: 6, lvl: 2, h: 'high' }
+  // coup de pied tornade (360° en l'air)
+  jhk: { pose: 'jhkT', base: 'jump', st: 6, ac: 20, rc: 0, dmg: 90, hs: 22, bs: 14, limb: 'ffo', r: 22, kb: 6, lvl: 2, h: 'high', name: 'TORNADE',
+    keys: [[0, 'jump'], [6, 'jhkT', { spin: 6.28 }], [26, 'jhkT', { spin: 6.28 }]] },
+  // ---- coups de commande (avant + bouton) ----
+  // chassé frontal / teep : repousse l'adversaire
+  flk: { pose: 'teep', st: 7, ac: 4, rc: 14, dmg: 55, hs: 16, bs: 10, limb: 'ffo', r: 20, kb: 18, lvl: 2, name: 'CHASSÉ FRONTAL',
+    keys: [[0, 'idle'], [4, 'teepChamber'], [7, 'teep'], [11, 'teep'], [16, 'teepChamber'], [25, 'idle']] },
+  // coup de pied retourné (spinning back kick)
+  fhk: { pose: 'backKick', st: 11, ac: 4, rc: 18, dmg: 115, hs: 24, bs: 16, limb: 'bfo', r: 23, kb: 15, lvl: 3, name: 'RETOURNÉ',
+    keys: [[0, 'idle'], [6, 'backTurn', { spin: 2.2 }], [11, 'backKick', { spin: 3.14 }], [15, 'backKick', { spin: 3.14 }], [24, 'backTurn', { spin: 4.6 }], [33, 'idle', { spin: 6.28 }]] },
+  // genou sauté (MMA)
+  fhp: { pose: 'knee', st: 9, ac: 6, rc: 14, dmg: 100, hs: 24, bs: 15, limb: 'fkn', r: 24, kb: 8, lvl: 3, kd: true, launch: -7, name: 'GENOU SAUTÉ', hop: { at: 4, vx: 6, vy: -7.5 },
+    keys: [[0, 'idle'], [4, 'crouch'], [9, 'knee'], [15, 'knee'], [22, 'jump'], [29, 'idle']] }
 };
+// pose interpolée d'un coup à images-clés (la rotation du corps projette aussi le squelette 2D : sx = cos(spin))
+function keyPose(keys, t) {
+  let i = 0; while (i < keys.length - 2 && t >= keys[i + 1][0]) i++;
+  const a = keys[i], b = keys[i + 1] || a;
+  const P = k => ({ ...(typeof k[1] === 'string' ? POSES[k[1]] : k[1]), ...(k[2] || {}) });
+  const k = b === a ? 1 : clamp((t - a[0]) / Math.max(1, b[0] - a[0]), 0, 1);
+  const p = lerpPose(P(a), P(b), k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+  p.sx = Math.cos(p.spin || 0);
+  return p;
+}
 const SPECIAL_MV = {
   proj: { dmg: 90, hs: 22, bs: 16, kb: 8, lvl: 3, chip: true },
   uppercut: { limb: 'fha', r: 26, dmg: 70, hs: 25, bs: 16, kb: 4, lvl: 3, kd: true, launch: -10, hits: 2, every: 8, chip: true },
@@ -24,7 +58,8 @@ const SPECIAL_MV = {
   rush: { limb: 'fha', r: 26, dmg: 110, hs: 25, bs: 16, kb: 12, lvl: 3, kd: true, launch: -7, chip: true },
   beam: { dmg: 30, hs: 30, bs: 12, kb: 2, lvl: 4, chip: true, sup: true },
   storm: { limb: 'fha', r: 34, dmg: 34, hs: 30, bs: 10, kb: 1, lvl: 4, hits: 9, every: 4, chip: true, sup: true, drag: true },
-  srush: { limb: 'fha', r: 30, dmg: 30, hs: 60, bs: 16, kb: 0, lvl: 4, chip: true, sup: true }
+  srush: { limb: 'fha', r: 30, dmg: 30, hs: 60, bs: 16, kb: 0, lvl: 4, chip: true, sup: true },
+  moulinet: { limb: 'ffo', r: 36, dmg: 10, hs: 60, bs: 10, kb: 0, lvl: 3, sup: true }
 };
 const MOT = { QCF: [2, 3, 6], QCB: [2, 1, 4], DP: [6, 2, 3], SUP: [2, 3, 6, 2, 3, 6] };
 
@@ -230,8 +265,20 @@ class Fighter {
     if ((btn === 'sp1' || (P && this.motion(MOT.QCF, 16, now))) && !this.proj) { this.startSpecial('proj', str, F); return true; }
     if (specialOnly || btn === 'sp1') return false;
     const crouch = this.dirN <= 3;
+    // projection : avant/arrière + poing fort, au contact
+    if (btn === 'hp' && (this.dirN === 6 || this.dirN === 4) && this.canThrow(o)) { this.startThrow(o, F); return true; }
+    if (!crouch && this.dirN === 6 && NORMALS['f' + btn]) { this.startNormal('f' + btn); return true; }
     this.startNormal((crouch ? 'c' : '') + btn);
     return true;
+  }
+  canThrow(o) {
+    return Math.abs(o.x - this.x) < 78 && !o.air && !this.air && o.inv <= 0 && ['idle', 'walk', 'crouch', 'guard', 'attack', 'land'].includes(o.st);
+  }
+  startThrow(o, F) {
+    this.setSt('throw'); this.thr = { type: this.ch.throwType || 'suplex', o }; this.vx = 0; this.inv = 999; this.mv = null;
+    o.setSt('held'); o.inv = 999; o.vx = 0; o.vy = 0; o.push = 0; o.mv = null; o.amv = null; o.beam = null; o.hover = false; o.ghostOn = false;
+    o.heldHipY = null; o.heldPose = POSES.hit; o.z3 = 0; o.face = -this.face;
+    AU.sfx('block'); F.announceMove && F.announceMove(this, this.ch.throwName || 'PROJECTION');
   }
   startNormal(key) {
     this.mv = NORMALS[key]; this.setSt('attack'); this.vx = 0; this.hitN = 0; this.hitCD = 0; this.connected = false; this.basePose = this.mv.base || 'idle';
@@ -282,8 +329,12 @@ class Fighter {
           else if (b && b.b === 'su' && this.meter >= 100 && this.ch.sup === 'beam') { /* pas de super aérien */ }
         }
         break;
+      case 'throw': if (this.updThrow(F, this.thr.o)) { this.inv = 0; this.thr = null; this.setSt('idle'); } break;
+      case 'held': break;
       case 'attack': {
         const m = this.mv, tot = m.st + m.ac + m.rc;
+        if (m.hop && this.t === m.hop.at) { this.vx = m.hop.vx * this.face; this.vy = m.hop.vy; AU.sfx('jump'); }
+        if (m.hop && !this.air && this.t > m.hop.at + 3) this.vx *= 0.6;
         if (this.t === m.st) AU.sfx(m.lvl > 1 ? 'whiffH' : 'whiff');
         if (m.cancel && this.connected && controllable && this.t < tot - 1) { if (this.tryAttack(F, o, true)) break; }
         if (this.t >= tot) { this.setSt(m.base === 'crouch' && dir <= 3 ? 'crouch' : 'idle'); this.mv = null; }
@@ -315,6 +366,8 @@ class Fighter {
       case 'win': case 'lose': break;
     }
     // ---- physique
+    if (this.st === 'held') { this.computeSkel(); return; }
+    if (this.z3) { this.z3 *= 0.86; if (Math.abs(this.z3) < 0.5) this.z3 = 0; }
     if (this.push) {
       const nx = this.x + this.push;
       const cl = F.clampX(nx, this);
@@ -428,6 +481,40 @@ class Fighter {
       }
       if (t === 36) { this.ghostOn = false; this.vx = 0; }
       if (t >= 56) { this.inv = 0; this.setSt('idle'); }
+    } else if (type === 'moulinet') { // Atlas : bond vrillé vers une prise en ciseaux inversée
+      if (t < 8) { this.tpose = lerpPose(POSES.idle, POSES.crouch, easeOut(t / 8)); const c = this.wp('hip'); FX.add({ type: 'glow', x: c.x + rand(-90, 90), y: c.y + rand(-90, 60), size: 9, life: 14, max: 14, col: ch.accent, target: c }); }
+      if (t === 8) { this.vy = -9; this.vx = f * 12; AU.sfx('rush'); dust(this.x, GROUND, 10); this.ghostOn = true; }
+      if (t >= 8) {
+        const k = clamp((t - 8) / 16, 0, 1);
+        this.tpose = { ...lerpPose(POSES.crouch, POSES.scissor, easeOut(k)), rot: -180 * easeOut(k) };
+        if (t > 14 && !this.air) { this.ghostOn = false; this.vx = 0; this.inv = 0; this.landRec = 24; this.setSt('land'); }
+      }
+    } else if (type === 'moulinetLock') { // moulinet 720 : appui renversé sur les mains, rotation continue des hanches
+      const v = o, u = t, X = this.lockX;
+      this.vx = 0; this.vy = 0; this.y = GROUND;
+      if (u < 72) { this.hover = true; this.ghostOn = false; this.x = F.clampX(X - f * 14, this); }
+      if (u < 12) {
+        this.tpose = lerpPose(this.tpose || POSES.scissor, POSES.scissor, 0.4);
+        v.x = clamp(X, 40, STAGE_W - 40); v.heldHipY = null; v.heldPose = POSES.hit; v.z3 = 0;
+      } else if (u < 72) {
+        const k = (u - 12) / 60, a = (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2) * Math.PI * 6;
+        this.tpose = { ...lerpPose(POSES.scissor, POSES.handstand, Math.min(1, k * 4)), spin: a, sx: Math.cos(a), headSpin: -a * 0.5 };
+        const R = 46, lift = Math.min(1, (u - 12) / 14);
+        v.x = clamp(this.x + f * Math.cos(a) * R, 40, STAGE_W - 40); v.z3 = Math.sin(a) * R;
+        v.heldHipY = GROUND - lerp(90, 168, easeOut(lift));
+        v.heldPose = { ...lerpPose(POSES.hit, POSES.fall, lift), rot: -90 * lift, spin: a + Math.PI / 2, sx: Math.cos(a + Math.PI / 2) };
+        if (u % 6 === 0) this.chipHit(F, v, 16);
+        if (u % 3 === 0) FX.add({ type: 'ring', x: this.x, y: GROUND - 6, size: 120, life: 12, max: 12, col: ch.accent, flat: 0.22, lw: 4 });
+        if (u % 2 === 0) FX.add({ type: 'spark', x: this.x + rand(-30, 30), y: GROUND - rand(0, 10), vx: rand(-6, 6), vy: rand(-3, -1), size: 2, life: 12, max: 12, col: '#ffd27a' });
+      } else if (u === 72) {
+        this.hover = false; v.heldHipY = null;
+        F.applyHit(this, v, { x: v.x, y: GROUND - 160 }, { dmg: 110, kd: true, launch: -11, kb: 16, lvl: 4, sup: true, hs: 30 }, false);
+        explosion(v.x, GROUND - 150, ch.accent, 1.2); F.shake = 16; F.flash = 6; F.flashCol = '#fff'; AU.sfx('hitS');
+      } else {
+        const k = clamp((u - 72) / 20, 0, 1);
+        this.tpose = { ...lerpPose(POSES.handstand, POSES.idle, easeOut(k)), rot: lerp(-180, -360, easeOut(k)) };
+        if (u >= 94) { this.ghostOn = false; this.inv = 0; this.tpose = null; this.setSt('idle'); }
+      }
     } else if (type === 'barrage') {
       const v = o;
       this.ghostOn = true;
@@ -448,6 +535,62 @@ class Fighter {
       if (t >= 90) { this.ghostOn = false; this.inv = 0; this.bpose = null; this.setSt('idle'); }
     }
   }
+  // coup intermédiaire pendant une prise (ne met jamais K.O.)
+  chipHit(F, v, dmg) {
+    v.hp = Math.max(1, v.hp - Math.round(dmg * this.ch.power)); v.flash = 3;
+    this.combo = (this.combo || 0) + 1; F.combo[this.side] = { n: this.combo, t: 0 };
+    hitSpark(v.x, v.hipY - 30, 2, this.ch.accent, this.face, false); AU.sfx('hitL'); F.shake = Math.max(F.shake, 4);
+    this.meter = Math.min(100, this.meter);
+  }
+  // ---- projections (renvoie true quand c'est fini) ----
+  updThrow(F, o) {
+    const t = this.t, f = this.face, ax = this.x, type = this.thr.type, ch = this.ch;
+    const V = (x, hipY, pose, rot = 0, spin = 0, z = 0) => {
+      o.x = clamp(x, 40, STAGE_W - 40); o.heldHipY = hipY; o.z3 = z;
+      o.heldPose = { ...pose, rot, spin, sx: Math.cos(spin) };
+    };
+    const slam = (dmg, x) => {
+      o.heldHipY = null; o.x = clamp(x, 40, STAGE_W - 40); o.y = GROUND - 1;
+      this.combo = 0;
+      F.applyHit(this, o, { x: o.x, y: GROUND - 25 }, { dmg, kd: true, launch: -3, kb: 3, lvl: 3, hs: 20 }, false);
+      dust(o.x, GROUND, 18); F.shake = Math.max(F.shake, 14); AU.sfx('land'); AU.sfx('hitS');
+    };
+    const E = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+    if (t <= 8) { // saisie
+      this.tpose = lerpPose(POSES.idle, POSES.grab, easeOut(t / 8));
+      V(ax + f * 58, null, POSES.hit);
+      if (t === 8) AU.sfx('whiffH');
+      return false;
+    }
+    if (type === 'suplex') { // suplex allemand : soulevé par-dessus la tête, pont, écrasé derrière
+      if (t <= 22) { const k = E((t - 8) / 14); this.tpose = lerpPose(POSES.grab, POSES.liftOver, k); V(ax + f * lerp(58, 4, k), GROUND - lerp(90, 210, k), POSES.fall, -180 * k); }
+      else if (t <= 32) { const k = (t - 22) / 10; this.tpose = lerpPose(POSES.liftOver, POSES.bridge, E(k)); V(ax - f * lerp(4, 72, k), GROUND - lerp(210, 28, easeIn(k)), POSES.fall, lerp(-180, -270, k)); if (t === 32) slam(140, ax - f * 72); }
+      else { this.tpose = lerpPose(POSES.bridge, POSES.idle, easeOut((t - 32) / 16)); if (t >= 48) return true; }
+    } else if (type === 'judo') { // o-goshi : chargé sur la hanche, rotation, projeté devant
+      if (t <= 20) { const k = E((t - 8) / 12); this.tpose = { ...lerpPose(POSES.grab, POSES.hipLoad, k), spin: 2.6 * k }; V(ax + f * lerp(58, 14, k), GROUND - lerp(90, 152, k), POSES.fall, -110 * k); }
+      else if (t <= 30) { const k = (t - 20) / 10; this.tpose = { ...lerpPose(POSES.hipLoad, POSES.hipThrow, E(k)), spin: lerp(2.6, 2.95, k) }; V(ax + f * lerp(14, 76, k), GROUND - lerp(152, 28, easeIn(k)), POSES.fall, lerp(-110, -270, k)); if (t === 30) slam(130, ax + f * 76); }
+      else { const k = easeOut((t - 30) / 16); this.tpose = { ...lerpPose(POSES.hipThrow, POSES.idle, k), spin: lerp(2.95, 6.28, k) }; if (t >= 46) return true; }
+    } else if (type === 'takedown') { // double-leg : plongée basse, sur l'épaule, écrasé devant
+      if (t <= 18) { const k = E((t - 8) / 10); this.tpose = lerpPose(POSES.grab, POSES.shoot, k); this.x = F.clampX(ax + f * 1.5, this); V(this.x + f * 44, null, POSES.hit); }
+      else if (t <= 30) { const k = E((t - 18) / 12); this.tpose = lerpPose(POSES.shoot, POSES.carry, k); V(ax + f * lerp(44, 8, k), GROUND - lerp(90, 172, k), POSES.fall, -90 * k); }
+      else if (t <= 38) { const k = (t - 30) / 8; this.tpose = lerpPose(POSES.carry, POSES.slamFwd, E(k)); V(ax + f * lerp(8, 70, k), GROUND - lerp(172, 26, easeIn(k)), POSES.fall, lerp(-90, -100, k)); if (t === 38) slam(135, ax + f * 70); }
+      else { this.tpose = lerpPose(POSES.slamFwd, POSES.idle, easeOut((t - 38) / 16)); if (t >= 54) return true; }
+    } else if (type === 'helix') { // ATLAS — TORSION 360 : buste à rotation continue, puis pont contorsionniste impossible
+      if (t <= 20) { const k = E((t - 8) / 12); this.tpose = lerpPose(POSES.grab, POSES.liftOver, k); V(ax + f * lerp(58, 0, k), GROUND - lerp(90, 205, k), POSES.fall, -90 * k); }
+      else if (t <= 58) {
+        const k = (t - 20) / 38, tw = E(k) * Math.PI * 4;
+        this.tpose = { ...POSES.liftOver, twist: tw, headSpin: -tw * 1.5 };
+        V(ax + f * Math.cos(tw) * 10, GROUND - 205, POSES.fall, -90, tw, Math.sin(tw) * 10);
+        if (t % 8 === 4) this.chipHit(F, o, 12);
+        if (t % 2 === 0) FX.add({ type: 'ring', x: ax, y: GROUND - 195, size: 150, life: 10, max: 10, col: ch.accent, flat: 0.25, lw: 3 });
+        if (t % 4 === 0) FX.add({ type: 'spark', x: ax + rand(-60, 60), y: GROUND - rand(150, 240), vx: rand(-8, 8), vy: rand(-3, 3), size: 2, life: 12, max: 12, col: '#fff3c0' });
+        if (t === 21) AU.sfx('spin');
+      }
+      else if (t <= 72) { const k = (t - 58) / 14; this.tpose = lerpPose(POSES.liftOver, POSES.contort, E(k)); V(ax - f * lerp(0, 76, k), GROUND - lerp(205, 24, easeIn(k)), POSES.fall, lerp(-90, -180, k)); if (t === 72) { slam(170, ax - f * 76); explosion(ax - f * 76, GROUND - 30, ch.accent, 1.3); F.flash = 5; F.flashCol = '#fff'; } }
+      else { const k = easeOut((t - 72) / 24); this.tpose = { ...lerpPose(POSES.contort, POSES.idle, k), twist: Math.PI * (1 - k), headSpin: Math.PI * 2 * (1 - k) }; if (t >= 96) return true; }
+    }
+    return false;
+  }
   // point mondial d'une articulation
   wp(k) { return { x: this.x + this.skel[k].x, y: this.hipY + this.skel[k].y }; }
   computePose() {
@@ -458,6 +601,11 @@ class Fighter {
       case 'idle': case 'prejump': {
         p = { ...POSES.idle }; p.fe += bob; p.be -= bob; p.fk += bob; p.bk += bob * 0.6; p.lean += bob * 0.3;
         if (st === 'prejump') p = lerpPose(p, POSES.crouch, 0.4);
+        else if (ch.id === 'atlas') { // moteurs 360° : la tête fait un tour complet, le buste regarde derrière
+          const ph = (performance.now() / 1000 + this.side * 2.3) % 7;
+          if (ph < 1.3) p.headSpin = easeOut(ph / 1.3) * Math.PI * 2;
+          else if (ph > 3.6 && ph < 5.2) p.twist = Math.sin((ph - 3.6) / 1.6 * Math.PI) * Math.PI * 0.85;
+        }
         break;
       }
       case 'guard': p = POSES.block; break;
@@ -472,15 +620,18 @@ class Fighter {
         if (t < 4) p = lerpPose(POSES.idle, POSES.jump, t / 4); else p = base;
         if (this.amv) {
           const m = this.amv, a = this.at;
-          const k = a < m.st ? easeOut(a / m.st) : 1;
-          p = lerpPose({ ...p, rot: 0 }, POSES[m.pose], k);
+          if (m.keys) p = keyPose(m.keys, a);
+          else { const k = a < m.st ? easeOut(a / m.st) : 1; p = lerpPose({ ...p, rot: 0 }, POSES[m.pose], k); }
         }
         break;
       }
       case 'land': p = lerpPose(POSES.crouch, POSES.idle, clamp(t / Math.max(1, this.landRec), 0, 1) * 0.8); break;
+      case 'throw': p = this.tpose || POSES.grab; break;
+      case 'held': p = this.heldPose || POSES.hit; break;
       case 'attack': {
         const m = this.mv, base = POSES[m.base || 'idle'], strike = POSES[m.pose];
-        if (t < m.st) p = lerpPose(base, strike, easeOut(t / m.st) * 0.85);
+        if (m.keys) p = keyPose(m.keys, t);
+        else if (t < m.st) p = lerpPose(base, strike, easeOut(t / m.st) * 0.85);
         else if (t < m.st + m.ac) p = strike;
         else p = lerpPose(strike, base, easeIn((t - m.st - m.ac) / m.rc));
         break;
@@ -489,8 +640,17 @@ class Fighter {
       case 'block': p = this.crouching ? POSES.cblock : POSES.block; break;
       case 'fall': p = { ...POSES.fall, rot: -clamp(t * 7, 0, 100) }; break;
       case 'down': p = { ...POSES.down, rot: -90 }; break;
-      case 'getup': p = lerpPose({ ...POSES.down, rot: -90 }, POSES.crouch, easeOut(t / 20)); break;
-      case 'win': p = lerpPose(POSES.idle, (this.side + ((t / 60) | 0)) % 2 ? POSES.win : POSES.win2, clamp(t / 12, 0, 1)); break;
+      case 'getup': {
+        const k = easeOut(t / 20);
+        p = lerpPose({ ...POSES.down, rot: -90 }, POSES.crouch, k);
+        if (ch.id === 'atlas') { p.rot = lerp(-90, -360, k); p.twist = (1 - k) * Math.PI; p.headSpin = (1 - k) * Math.PI * 2; } // roulade arrière contorsionniste
+        break;
+      }
+      case 'win': {
+        p = lerpPose(POSES.idle, (this.side + ((t / 60) | 0)) % 2 ? POSES.win : POSES.win2, clamp(t / 12, 0, 1));
+        if (ch.id === 'atlas') { p.twist = Math.sin(t * 0.045) * Math.PI; p.headSpin = -t * 0.09; }
+        break;
+      }
       case 'lose': p = lerpPose(POSES.idle, POSES.hit, 0.7); break;
       case 'special': p = this.specialPose(); break;
       case 'super': p = this.superPose(); break;
@@ -542,6 +702,7 @@ class Fighter {
         if (t < 36) return POSES.rush;
         return lerpPose(POSES.rush, POSES.idle, (t - 36) / 20);
       case 'barrage': return POSES[this.bpose || 'rush'];
+      case 'moulinet': case 'moulinetLock': return this.tpose || POSES.crouch;
     }
     return POSES.idle;
   }
@@ -549,7 +710,8 @@ class Fighter {
     this.computePose();
     this.skel = skeleton(this.ch, this.pose, this.face);
     const s = this.ch.scale * this.ch.leg;
-    if (this.st === 'fall') this.hipY = this.y - 34;
+    if (this.st === 'held' && this.heldHipY != null) this.hipY = this.heldHipY;
+    else if (this.st === 'fall') this.hipY = this.y - 34;
     else if (this.y < GROUND - 0.5 || this.st === 'jump' || this.hover) this.hipY = Math.min(this.y - HIP_H * s, GROUND - this.skel._low);
     else this.hipY = GROUND - this.skel._low;
   }
@@ -577,6 +739,7 @@ class Fighter {
       const t = this.t;
       if (this.sp === 'storm') { m = SPECIAL_MV.storm; active = t >= 6 && t < 44; }
       else if (this.sp === 'rush') { m = SPECIAL_MV.srush; active = t >= 10 && t < 36; }
+      else if (this.sp === 'moulinet') { m = SPECIAL_MV.moulinet; active = t >= 10 && t < 32; }
     }
     if (!m || !active || !m.limb) return null;
     const maxHits = m.hits || 1;
@@ -652,12 +815,15 @@ class AI {
       else { this.hold = { [toward]: true }; this.cool = 10 + ((Math.random() * 20) | 0); }
     } else if (dist > 130) {
       if (R < 0.05 && (me.ch.move === 'rush' || me.ch.move === 'spin')) { press('sp2'); this.cool = 25; }
+      else if (R < 0.065 && dist < 190) { this.hold = { [toward]: true }; pad.held[toward] = true; press('hp'); this.cool = 22; } // genou sauté
       else if (R < 0.08 && !me.proj) { press('sp1'); this.cool = 18; }
       else if (R < 0.12) { this.hold = { u: true, [toward]: true }; this.cool = 8; }
       else if (R < 0.16) { this.hold = { [away]: true }; this.cool = 12; }
       else { this.hold = { [toward]: true }; this.cool = 6 + ((Math.random() * 12) | 0); }
     } else {
       const r = Math.random();
+      if (dist < 76 && r < 0.05 + L * 0.025) { this.hold = { [toward]: true }; pad.held[toward] = true; press('hp'); this.cool = 20; return pad; } // projection
+      if (r < 0.1) { this.hold = { [toward]: true }; pad.held[toward] = true; press(Math.random() < 0.5 ? 'lk' : 'hk'); this.cool = 14; return pad; } // chassé frontal / retourné
       if (r < 0.15) { this.hold = { d: true }; press('lk'); this.comboNext = Math.random() < 0.1 * L ? 'sp2' : null; }
       else if (r < 0.3) { press('lp'); this.comboNext = Math.random() < 0.12 * L ? (Math.random() < 0.5 ? 'sp1' : 'sp2') : null; }
       else if (r < 0.45) { press('hp'); this.comboNext = Math.random() < 0.08 * L ? 'sp2' : null; }

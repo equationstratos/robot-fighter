@@ -318,7 +318,11 @@ const RK = (function () {
   /* ---------------- pose : on place chaque pièce sur le squelette ---------------- */
   const ang = (a, b) => Math.atan2(-(b.x - a.x), -(b.y - a.y)); // rotation Z qui amène +Y sur le segment a→b (repère 3D, y vers le haut)
   function setLimb(o, a, b, z) { o.position.set(a.x, -a.y, z); o.rotation.set(0, 0, ang(a, b)); }
-  function pose(rb, p, x, hipY, face, yaw = -0.42, t = 0, st = '') {
+  const UPPER = ['torso', 'neck', 'head', 'fua', 'ffa', 'fha', 'fel', 'fsc', 'bua', 'bfa', 'bha', 'bel', 'bsc'];
+  const qTw = new T.Quaternion(), vTw = new T.Vector3(), yAx = new T.Vector3(0, 1, 0);
+  // p.twist : rotation du haut du corps autour de l'axe vertical passant par la hanche (moteurs 360°)
+  // p.headSpin : rotation de la tête sur elle-même ; z : décalage en profondeur (prises, projections)
+  function pose(rb, p, x, hipY, face, yaw = -0.42, t = 0, st = '', z = 0) {
     const ch = rb.ch, P = rb.P;
     const pz = p.sx !== 1 ? Object.assign({}, p, { sx: 1 }) : p;
     const S = skeleton(ch, pz, 1);
@@ -351,6 +355,16 @@ const RK = (function () {
     P.torso.position.set(S.hip.x, -S.hip.y, 0); P.torso.rotation.set(0, 0, torsoA);
     setLimb(P.neck, S.neck, S.head, 0);
     P.head.position.set(S.head.x, -S.head.y, 0); P.head.rotation.set(0, 0, ang(S.neck, S.head));
+    if (p.headSpin) P.head.rotateY(p.headSpin);
+    if (p.twist) {
+      qTw.setFromAxisAngle(yAx, p.twist);
+      const hx = S.hip.x, hy = -S.hip.y;
+      for (const k of UPPER) {
+        const o = P[k]; vTw.set(o.position.x - hx, o.position.y - hy, o.position.z).applyQuaternion(qTw);
+        o.position.set(hx + vTw.x, hy + vTw.y, vTw.z); o.quaternion.premultiply(qTw);
+      }
+    }
+    if (z) rb.root.position.z = z;
     if (rb.tick) rb.tick(t, { pose: p, st, face });
     return S;
   }
