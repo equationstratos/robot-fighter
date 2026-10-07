@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Robot Fighter II — prévisualisation des modèles</title>
+<style>
+  html, body { margin: 0; background: #111318; overflow: hidden; }
+  #game, #touch, #rotate, video { display: none; }
+  #out { display: block; }
+</style>
+<script>
+  window.__errors = [];
+  window.addEventListener('error', e => window.__errors.push('erreur JS: ' + e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno));
+  const _ce = console.error; console.error = (...a) => { window.__errors.push('console.error: ' + a.map(x => x && x.stack ? x.stack : String(x)).join(' ')); _ce.apply(console, a); };
+</script>
+</head>
+<body>
+<!-- éléments attendus par core.js -->
+<canvas id="game" width="16" height="9"></canvas>
+<div id="touch"><div id="stick"><div id="knob"></div></div></div>
+<div id="rotate"></div>
+<canvas id="out" width="1600" height="900"></canvas>
+<script src="../vendor/three-bundle.js"></script>
+<script src="../js/core.js"></script>
+<script src="../js/robots.js"></script>
+<script src="../js/kit.js"></script>
+<script src="../js/models/default.js"></script>
+<script src="../js/models/optimus.js"></script>
+<script src="../js/models/atlas.js"></script>
+<script src="../js/models/figure.js"></script>
+<script src="../js/models/asimo.js"></script>
+<script src="../js/models/h1.js"></script>
+<script src="../js/models/ameca.js"></script>
+<script src="../js/models/digit.js"></script>
+<script src="../js/models/apollo.js"></script>
+<script src="viewer.js"></script>
+</body>
+</html>

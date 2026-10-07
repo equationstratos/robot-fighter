@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#05060a">
+<title>Robot Fighter II</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Russo+One&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#05060a; --fg:#f2f4f8; --btn:rgba(255,255,255,.07); --btn-b:rgba(255,255,255,.35); }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); overflow:hidden;
+    font-family:'Russo One',system-ui,sans-serif; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  #game { display:block; background:#000; image-rendering:auto; box-shadow:0 0 60px rgba(60,140,255,.15); }
+  video.src { display:none; }
+
+  /* ---- touch controls ---- */
+  #touch { position:fixed; inset:0; pointer-events:none; display:none; }
+  body.touch #touch.on { display:block; }
+  #stick { position:absolute; left:max(18px,env(safe-area-inset-left)); bottom:22px; width:150px; height:150px;
+    border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,.08),rgba(255,255,255,.03));
+    border:2px solid var(--btn-b); pointer-events:auto; }
+  #knob { position:absolute; left:50%; top:50%; width:62px; height:62px; margin:-31px 0 0 -31px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff8,#8af3 60%); border:2px solid #fff9; }
+  #btns { position:absolute; right:max(14px,env(safe-area-inset-right)); bottom:16px; width:236px; height:178px; pointer-events:none; }
+  .b { position:absolute; opacity:.8; width:62px; height:62px; border-radius:50%; pointer-events:auto; display:flex;
+    align-items:center; justify-content:center; font:12px 'Press Start 2P',monospace; color:#fff;
+    border:2px solid var(--btn-b); background:var(--btn); text-shadow:0 1px 2px #000; }
+  .b.on { background:rgba(255,255,255,.4); transform:scale(.93); }
+  .b.p { border-color:#ff5a5a; } .b.k { border-color:#4fb4ff; }
+  .b.s { width:54px; height:54px; font-size:8px; border-color:#ffd23f; }
+  .b.su { width:54px; height:54px; font-size:7px; border-color:#ff3fd2; background:rgba(255,63,210,.18); }
+  #bLP{right:150px;bottom:84px} #bHP{right:82px;bottom:100px} #bSP1{right:14px;bottom:122px}
+  #bLK{right:150px;bottom:12px} #bHK{right:82px;bottom:28px} #bSP2{right:14px;bottom:60px}
+  #bSU{right:14px;bottom:0px}
+  #pauseBtn { position:absolute; top:max(8px,env(safe-area-inset-top)); left:50%; transform:translateX(-50%) translateY(58px);
+    width:44px; height:30px; border-radius:8px; pointer-events:auto; font:10px 'Press Start 2P',monospace; }
+  #rotate { position:fixed; inset:0; display:none; align-items:center; justify-content:center; text-align:center;
+    background:#05060aee; font:12px/2 'Press Start 2P',monospace; padding:24px; z-index:5; pointer-events:none; }
+  @media (orientation:portrait) and (max-width:700px) { body.touch #rotate.show { display:flex; } }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game" width="960" height="540" aria-label="Robot Fighter II"></canvas></div>
+
+<video class="src" id="vid1" muted playsinline preload="auto"><source src="assets/intro1.webm" type="video/webm"><source src="assets/intro1.mp4" type="video/mp4"></video>
+<video class="src" id="vid2" muted playsinline preload="auto"><source src="assets/intro2.webm" type="video/webm"><source src="assets/intro2.mp4" type="video/mp4"></video>
+
+<div id="touch">
+  <div id="stick"><div id="knob"></div></div>
+  <div id="btns">
+    <div class="b p" id="bLP" data-k="lp">LP</div>
+    <div class="b p" id="bHP" data-k="hp">HP</div>
+    <div class="b k" id="bLK" data-k="lk">LK</div>
+    <div class="b k" id="bHK" data-k="hk">HK</div>
+    <div class="b s" id="bSP1" data-k="sp1">SP1</div>
+    <div class="b s" id="bSP2" data-k="sp2">SP2</div>
+    <div class="b su" id="bSU" data-k="su">SUPER</div>
+  </div>
+  <div class="b" id="pauseBtn" data-k="start">II</div>
+</div>
+<div id="rotate" class="show">Tournez votre téléphone<br>en mode paysage ↻</div>
+
+<script src="vendor/three-bundle.js"></script>
+<script src="js/core.js"></script>
+<script src="js/robots.js"></script>
+<script src="js/kit.js"></script>
+<script src="js/models/default.js"></script>
+<script src="js/models/optimus.js"></script>
+<script src="js/models/atlas.js"></script>
+<script src="js/models/figure.js"></script>
+<script src="js/models/asimo.js"></script>
+<script src="js/models/h1.js"></script>
+<script src="js/models/ameca.js"></script>
+<script src="js/models/digit.js"></script>
+<script src="js/models/apollo.js"></script>
+<script src="js/render3d.js"></script>
+<script src="js/stages.js"></script>
+<script src="js/fight.js"></script>
+<script src="js/scenes.js"></script>
+</body>
+</html>
