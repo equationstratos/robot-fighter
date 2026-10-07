@@ -22,6 +22,8 @@ class Fight {
     this.stage = STAGES[this.stageIdx];
     this.round = 1; this.frame = 0; this.camX = (STAGE_W - VIEW_W) / 2; this.zoom = 1; this.zx = W / 2; this.zy = H / 2;
     this.paused = false; this.pauseSel = 0; this.showMoves = false;
+    // training : mannequin réglable, vie qui se recharge, super infinie, compteur de dégâts
+    this.tr = opt.training ? { dummy: 'stand', superInf: true, last: 0, total: 0, hits: 0, maxCombo: 0, maxDmg: 0, pad: makePad(), ai: new AI(3) } : null;
     this.startRound();
   }
   startRound() {
@@ -33,6 +35,28 @@ class Fight {
     this.camX = (STAGE_W - VIEW_W) / 2;
   }
   other(f) { return this.p[0] === f ? this.p[1] : this.p[0]; }
+  // ----- training -----
+  dummyPad(f, o) {
+    const T = this.tr;
+    if (T.dummy === 'cpu') return T.ai.think(f, o, this);
+    const pad = T.pad; BTNS.forEach(b => { pad.pressed[b] = false; pad.held[b] = false; });
+    if (T.dummy === 'crouch') pad.held.d = true;
+    if (T.dummy === 'jump' && !f.air && f.neutral && this.frame % 45 === 0) { pad.held.u = true; pad.pressed.u = true; }
+    return pad;
+  }
+  trainingRefill() {
+    for (const f of this.p) {
+      if (f.hp <= 0) f.hp = 1; // pas de K.O. à l'entraînement
+      const busy = ['hit', 'fall', 'down', 'getup', 'held', 'block'].includes(f.st);
+      if (!busy && f.hp < 1000 && this.frame - (f.lastHitF || 0) > 50) f.hp = 1000;
+    }
+    if (this.tr.superInf) this.p[0].meter = 100;
+  }
+  resetTraining() {
+    this.p.forEach(f => { f.reset(); f.ko = false; });
+    this.projs = []; FX.clear(); this.combo = [null, null]; this.camX = (STAGE_W - VIEW_W) / 2;
+    Object.assign(this.tr, { last: 0, total: 0, hits: 0 });
+  }
   clampX(x, f) {
     const o = this.other(f);
     let lo = 40, hi = STAGE_W - 40;
@@ -50,9 +74,10 @@ class Fight {
   applyHit(a, d, pt, mv, canBlock = true, src = null) {
     const awayX = Math.sign(d.x - (src ? src.x - src.vx * 3 : a.x)) || -d.face;
     const pad = d.pad, held = pad ? pad.held : {};
-    const holdBack = d.cpuHold ? false : (awayX > 0 ? held.r : held.l);
-    const crouch = !!held.d;
-    const hOk = mv.h === 'low' ? crouch : mv.h === 'high' ? !crouch : true;
+    const autoG = !!(this.tr && d.side === 1 && this.tr.dummy === 'guard');
+    const holdBack = autoG || (d.cpuHold ? false : (awayX > 0 ? held.r : held.l));
+    const crouch = autoG ? mv.h === 'low' : !!held.d;
+    const hOk = autoG || (mv.h === 'low' ? crouch : mv.h === 'high' ? !crouch : true);
     const ch = a.ch;
     if (canBlock && d.canBlock && holdBack && hOk && !d.air) {
       d.crouching = crouch; d.setSt('block'); d.stun = mv.bs || 12;
@@ -68,7 +93,11 @@ class Fight {
     a.combo = inStun ? a.combo + 1 : 1;
     const scale = mv.sup ? 1 : 1 - Math.min(0.5, (a.combo - 1) * 0.09);
     const dmg = Math.round(mv.dmg * ch.power * scale);
-    d.hp = Math.max(0, d.hp - dmg);
+    d.hp = Math.max(0, d.hp - dmg); d.lastHitF = this.frame;
+    if (this.tr && a.side === 0) {
+      const T = this.tr; T.last = dmg; T.total = a.combo > 1 ? T.total + dmg : dmg; T.hits = a.combo;
+      T.maxCombo = Math.max(T.maxCombo, a.combo); T.maxDmg = Math.max(T.maxDmg, T.total);
+    }
     d.flash = 5; d.crouching = crouch && !d.air && d.st !== 'fall';
     d.mv = null; d.amv = null; d.hover = false; d.ghostOn = false; d.beam = null; d.grav = 0.75;
     if (d.st === 'special' || d.st === 'super') d.inv = 0;
@@ -189,13 +218,14 @@ class Fight {
     for (let i = 0; i < 2; i++) {
       const f = this.p[i], o = this.p[1 - i];
       let pad = null;
-      if (ctrl) pad = this.ai[i] ? this.ai[i].think(f, o, this) : pads[this.opt.versus ? i : 0];
+      if (ctrl) pad = this.tr && i === 1 ? this.dummyPad(f, o) : this.ai[i] ? this.ai[i].think(f, o, this) : pads[this.opt.versus ? i : 0];
       if (this.ai[i] && pad) f.cpuHold = false;
       f.update(pad, o, this, ctrl);
     }
     this.updateProjs();
     this.bodyPush();
     this.checkHits();
+    if (this.tr) this.trainingRefill();
     // caméra
     const tgt = clamp((this.p[0].x + this.p[1].x) / 2 - VIEW_W / 2, 0, STAGE_W - VIEW_W);
     this.camX += (tgt - this.camX) * 0.15;
@@ -203,6 +233,13 @@ class Fight {
   }
   flow() {
     const [a, b] = this.p;
+    if (this.tr) { // pas de manches ni de chrono en training
+      if (this.phase === 'intro') {
+        if (this.phaseT === 6) { this.announce('TRAINING', 60); AU.say('Training', 0.5, 1); }
+        if (this.phaseT >= 50) { this.phase = 'fight'; this.phaseT = 0; }
+      }
+      return;
+    }
     if (this.phase === 'intro') {
       if (this.phaseT === 10) { this.announce(this.round >= 3 && a.wins === 1 && b.wins === 1 ? 'FINAL ROUND' : 'ROUND ' + this.round, 80); AU.say(this.round >= 3 && a.wins === 1 && b.wins === 1 ? 'Final round' : 'Round ' + this.round); }
       if (this.phaseT === 95) { this.announce('FIGHT!', 50, { big: 1 }); AU.say('Fight!', 0.5, 1.1); AU.sfx('hitS'); this.shake = 8; }
@@ -251,17 +288,31 @@ class Fight {
       }
     }
   }
+  pauseItems() {
+    if (!this.tr) return [['CONTINUER', 'resume'], ['LISTE DES COUPS', 'moves'], ['QUITTER', 'quit']];
+    return [['CONTINUER', 'resume'], ['MANNEQUIN :  ◀ ' + DUMMY_NAMES[this.tr.dummy] + ' ▶', 'dummy'], ['JAUGE SUPER : ' + (this.tr.superInf ? 'INFINIE' : 'NORMALE'), 'super'],
+      ['REPLACER LES ROBOTS', 'reset'], ['LISTE DES COUPS', 'moves'], ['CHANGER DE ROBOTS', 'select'], ['QUITTER', 'quit']];
+  }
+  pauseLayout(n) { return n > 3 ? { y0: 168, dy: 47 } : { y0: 230, dy: 56 }; }
   updatePause() {
-    const pd = pads[0];
+    const pd = pads[0], items = this.pauseItems(), n = items.length, L = this.pauseLayout(n);
     if (this.showMoves) { if (confirmPressed(pd) || tapQueue.length) this.showMoves = false; tapQueue = []; return; }
-    if (pd.pressed.u) { this.pauseSel = (this.pauseSel + 2) % 3; AU.sfx('move'); }
-    if (pd.pressed.d) { this.pauseSel = (this.pauseSel + 1) % 3; AU.sfx('move'); }
-    let choose = confirmPressed(pd) ? this.pauseSel : -1;
-    for (const t of tapQueue) for (let i = 0; i < 3; i++) if (inRect(t, W / 2 - 170, 230 + i * 56 - 22, 340, 44)) choose = i;
+    if (pd.pressed.u) { this.pauseSel = (this.pauseSel + n - 1) % n; AU.sfx('move'); }
+    if (pd.pressed.d) { this.pauseSel = (this.pauseSel + 1) % n; AU.sfx('move'); }
+    let choose = confirmPressed(pd) ? this.pauseSel : -1, dir = 1;
+    const act0 = items[this.pauseSel][1];
+    if ((pd.pressed.l || pd.pressed.r) && (act0 === 'dummy' || act0 === 'super')) { choose = this.pauseSel; dir = pd.pressed.l ? -1 : 1; }
+    for (const t of tapQueue) for (let i = 0; i < n; i++) if (inRect(t, W / 2 - 190, L.y0 + i * L.dy - 21, 380, 42)) { choose = i; this.pauseSel = i; }
     tapQueue = [];
-    if (choose === 0) this.paused = false;
-    if (choose === 1) this.showMoves = true;
-    if (choose === 2) { this.paused = false; this.phase = 'done'; setScene(new TitleScene(true)); }
+    if (choose < 0) return;
+    const act = items[choose][1];
+    if (act === 'resume') this.paused = false;
+    if (act === 'moves') this.showMoves = true;
+    if (act === 'dummy') { const k = DUMMY_MODES.indexOf(this.tr.dummy); this.tr.dummy = DUMMY_MODES[(k + dir + DUMMY_MODES.length) % DUMMY_MODES.length]; AU.sfx('move'); }
+    if (act === 'super') { this.tr.superInf = !this.tr.superInf; AU.sfx('move'); }
+    if (act === 'reset') { this.resetTraining(); this.paused = false; AU.sfx('confirm'); }
+    if (act === 'select') { this.paused = false; this.phase = 'done'; setScene(new SelectScene('training')); }
+    if (act === 'quit') { this.paused = false; this.phase = 'done'; setScene(new TitleScene(true)); }
   }
   /* ---------- rendu ---------- */
   // caméra : centre (unités de jeu), zoom et angles cinématiques courants
@@ -446,9 +497,10 @@ class Fight {
     // chrono
     c.beginPath(); c.moveTo(W / 2 - 50, top - 4); c.lineTo(W / 2 + 50, top - 4); c.lineTo(W / 2 + 34, top + 46); c.lineTo(W / 2 - 34, top + 46); c.closePath();
     c.fillStyle = 'rgba(8,10,16,.55)'; c.fill(); c.strokeStyle = '#c9d0da'; c.lineWidth = 2; c.stroke();
-    txt(String(this.timer).padStart(2, '0'), W / 2, top + 22, 44, { font: FONT_BIG, grad: ['#ffffff', '#fff2c0', '#ffd25a'], stroke: '#14100a', sw: 6 });
+    txt(this.tr ? '∞' : String(this.timer).padStart(2, '0'), W / 2, top + 22, 44, { font: FONT_BIG, grad: ['#ffffff', '#fff2c0', '#ffd25a'], stroke: '#14100a', sw: 6 });
+    if (this.tr) this.drawTrainingPanel(c);
     // pastilles de manches gagnées
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < (this.tr ? 0 : 2); i++) {
       const dot = (x, on) => {
         c.beginPath(); c.arc(x, 76, 8, 0, 7); c.fillStyle = on ? '#ffc21a' : 'rgba(20,22,28,.8)'; c.fill();
         if (on) { c.save(); c.shadowColor = '#ffb000'; c.shadowBlur = 12; c.fill(); c.restore(); }
@@ -494,6 +546,13 @@ class Fight {
       txt('HITS', x, 244, 22, { font: FONT_BIG, align: i ? 'right' : 'left', color: '#ffffff', stroke: '#0b0d12', sw: 5, alpha: al });
     }
   }
+  drawTrainingPanel(c) {
+    const T = this.tr, x = W / 2 - 150, y = 92, w = 300, h = 58;
+    c.fillStyle = 'rgba(5,10,25,.72)'; c.fillRect(x, y, w, h); c.strokeStyle = 'rgba(155,231,255,.6)'; c.lineWidth = 1.5; c.strokeRect(x, y, w, h);
+    const cell = (lab, val, cx, col) => { txt(lab, cx, y + 15, 7, { color: '#9be7ff' }); txt(String(val), cx, y + 38, 18, { font: FONT_BIG, color: col || '#fff', stroke: '#000', sw: 4 }); };
+    cell('DEGATS', T.last, x + 40); cell('COMBO', T.total, x + 112, '#ffd23a'); cell('COUPS', T.hits, x + 180); cell('RECORD', T.maxDmg, x + 252, '#ff7a5a');
+    txt('MANNEQUIN : ' + DUMMY_NAMES[T.dummy] + '   ·   ' + (isTouch ? 'II' : 'ECHAP') + ' : menu training', W / 2, y + h + 12, 8, { color: '#ccc', stroke: '#000', sw: 3 });
+  }
   drawAnnounce(c) {
     const A = this.ann; if (!A || A.t > A.dur) return;
     const k = A.t < 8 ? easeOut(A.t / 8) : 1, out = A.t > A.dur - 10 ? (A.dur - A.t) / 10 : 1;
@@ -531,14 +590,17 @@ class Fight {
   drawPause(c) {
     c.fillStyle = 'rgba(0,0,10,.75)'; c.fillRect(0, 0, W, H);
     if (this.showMoves) return drawMoveList(c, this.p[0].ch, this.opt.versus ? this.p[1].ch : null);
-    bigTxt('PAUSE', W / 2, 150, 64);
-    ['CONTINUER', 'LISTE DES COUPS', 'QUITTER'].forEach((s, i) => {
-      const sel = this.pauseSel === i;
-      if (sel) { c.fillStyle = 'rgba(255,210,58,.15)'; c.fillRect(W / 2 - 170, 230 + i * 56 - 22, 340, 44); }
-      txt((sel ? '▶ ' : '') + s, W / 2, 230 + i * 56, 16, { color: sel ? '#ffd23a' : '#ccc', stroke: '#000', sw: 4 });
+    const items = this.pauseItems(), L = this.pauseLayout(items.length);
+    bigTxt(this.tr ? 'TRAINING' : 'PAUSE', W / 2, this.tr ? 96 : 150, this.tr ? 54 : 64);
+    items.forEach(([s], i) => {
+      const sel = this.pauseSel === i, y = L.y0 + i * L.dy;
+      if (sel) { c.fillStyle = 'rgba(255,210,58,.15)'; c.fillRect(W / 2 - 190, y - 21, 380, 42); }
+      txt((sel ? '▶ ' : '') + s, W / 2, y, 15, { color: sel ? '#ffd23a' : '#ccc', stroke: '#000', sw: 4 });
     });
   }
 }
+const DUMMY_MODES = ['stand', 'crouch', 'jump', 'guard', 'cpu'];
+const DUMMY_NAMES = { stand: 'DEBOUT', crouch: 'ACCROUPI', jump: 'SAUTE', guard: 'GARDE', cpu: 'CPU (RIPOSTE)' };
 // hurtbox même en chute / invincible (pour les supers)
 Fighter.prototype.hurtboxAny = function () { return this.hurtbox(true); };
 
@@ -581,6 +643,14 @@ function drawMoveList(c, ch1, ch2) {
 }
 
 /* =================== ÉCRAN TITRE =================== */
+const TITLE_ITEMS = [
+  ['ARCADE  (1 JOUEUR)', 'arcade', 'Affrontez tous les robots'],
+  ['VERSUS  (2 JOUEURS)', 'versus', 'Joueur contre joueur'],
+  ['TOURNOI  (8 ROBOTS)', 'tournament', 'Quarts, demies, finale'],
+  ['TRAINING', 'training', 'Entraînement libre'],
+  ['COMMANDES', 'controls', '']
+];
+const TITLE_Y0 = 300, TITLE_DY = 40;
 class TitleScene {
   constructor(skipPress) {
     this.t = 0; this.stage = skipPress ? 'menu' : 'press'; this.sel = 0; this.vi = 0;
@@ -600,16 +670,16 @@ class TitleScene {
       if (confirmPressed(pd) || pads[1].pressed.start || taps.length || anyKeyPressed) { this.stage = 'menu'; AU.sfx('coin'); AU.say('Robot Fighter 2', 0.35, 0.8); }
       return;
     }
-    const items = 3;
+    const items = TITLE_ITEMS.length;
     if (pd.pressed.u) { this.sel = (this.sel + items - 1) % items; AU.sfx('move'); }
     if (pd.pressed.d) { this.sel = (this.sel + 1) % items; AU.sfx('move'); }
     let ch = confirmPressed(pd) ? this.sel : -1;
-    for (const t of taps) for (let i = 0; i < items; i++) if (inRect(t, W / 2 - 200, 330 + i * 46 - 20, 400, 40)) { if (this.sel === i || isTouch) ch = i; this.sel = i; }
+    for (const t of taps) for (let i = 0; i < items; i++) if (inRect(t, W / 2 - 200, TITLE_Y0 + i * TITLE_DY - 18, 400, 36)) { if (this.sel === i || isTouch) ch = i; this.sel = i; }
     if (ch >= 0) {
       AU.sfx('confirm'); this.leave();
-      if (ch === 0) { GAME.mode = 'arcade'; setScene(new SelectScene('arcade')); }
-      if (ch === 1) { GAME.mode = 'versus'; setScene(new SelectScene('versus')); }
-      if (ch === 2) setScene(new ControlsScene());
+      const mode = TITLE_ITEMS[ch][1];
+      if (mode === 'controls') setScene(new ControlsScene());
+      else { GAME.mode = mode; setScene(new SelectScene(mode)); }
     }
   }
   draw() {
@@ -630,10 +700,11 @@ class TitleScene {
       if (this.t % 60 < 40) txt('PRESS START', W / 2, 380, 24, { color: '#fff', stroke: '#000', sw: 6, glow: '#ffd23a', blur: 14 });
       txt(isTouch ? 'Touchez l\'écran pour commencer' : 'Appuyez sur ENTRÉE', W / 2, 420, 10, { color: '#ccc', stroke: '#000', sw: 4 });
     } else {
-      ['ARCADE  (1 JOUEUR)', 'VERSUS  (2 JOUEURS)', 'COMMANDES'].forEach((s, i) => {
-        const y = 330 + i * 46, sel = this.sel === i;
-        if (sel) { c.fillStyle = 'rgba(255,210,58,.18)'; c.fillRect(W / 2 - 200, y - 20, 400, 40); c.strokeStyle = '#ffd23a'; c.strokeRect(W / 2 - 200, y - 20, 400, 40); }
+      TITLE_ITEMS.forEach(([s, , sub], i) => {
+        const y = TITLE_Y0 + i * TITLE_DY, sel = this.sel === i;
+        if (sel) { c.fillStyle = 'rgba(255,210,58,.18)'; c.fillRect(W / 2 - 200, y - 18, 400, 36); c.strokeStyle = '#ffd23a'; c.strokeRect(W / 2 - 200, y - 18, 400, 36); }
         txt(s, W / 2, y, 16, { color: sel ? '#ffd23a' : '#fff', stroke: '#000', sw: 5 });
+        if (sel && sub) txt(sub, W / 2 + 214, y, 8, { align: 'left', color: '#9be7ff', stroke: '#000', sw: 3 });
       });
     }
     txt('© 2026 WORLD ROBOT LEAGUE', W / 2, H - 18, 9, { color: '#888' });
@@ -741,14 +812,15 @@ const DEMOS = ch => (ch.id === 'atlas' ? ['contort'] : []).concat(['combo', 'spe
 const SEL_COLS = 5;
 class SelectScene {
   constructor(mode) {
-    this.mode = mode; this.t = 0; this.cur = [0, 1]; this.done = [false, mode === 'arcade'];
-    this.out = 0; mergeKeyboards = mode === 'arcade'; setTouchControls(false);
+    this.mode = mode; this.t = 0; this.cur = [0, 1]; this.done = [false, !this.two];
+    this.out = 0; mergeKeyboards = mode !== 'versus'; setTouchControls(false); this.lock = 0;
     AU.playTrack(TRACKS.select);
     this.anim = 0; this.shake = 0; this.flash = 0; this.demoI = [0, 0];
     FX.clear();
     this.pup = [new Puppet(), new Puppet()];
     this.pup.forEach((pp, p) => { pp.onFx = kind => this.fx(p, kind); pp.play('enter'); });
   }
+  get two() { return this.mode === 'versus' || this.mode === 'training'; } // deux robots à choisir
   previewX(p) { return p === 0 ? 150 : W - 150; }
   fx(p, kind) {
     const ch = ROSTER[this.cur[p]], face = p === 0 ? 1 : -1;
@@ -765,14 +837,17 @@ class SelectScene {
     // démonstration automatique quand on reste sur un robot
     for (let p = 0; p < 2; p++) if (!this.pup[p].busy && this.pup[p].idleT > (this.done[p] ? 150 : 200)) this.demo(p);
     // toucher / cliquer le grand robot : il fait une démonstration
-    for (const t of taps) for (let p = 0; p < (this.mode === 'versus' ? 2 : 1); p++) {
+    for (const t of taps) for (let p = 0; p < (this.two ? 2 : 1); p++) {
       if (inRect(t, this.previewX(p) - 120, 120, 240, 340)) { this.demo(p); AU.sfx('select'); }
     }
     if (escPressed) { AU.sfx('select'); setScene(new TitleScene(true)); return; }
     if (this.out) { if (++this.out > 75) this.go(); return; }
+    if (this.lock > 0) this.lock--;
     for (let p = 0; p < 2; p++) {
       if (this.done[p]) continue;
-      const pd = pads[p];
+      // training : le joueur 1 choisit aussi le mannequin, après son propre robot
+      if (this.mode === 'training' && p === 1 && (!this.done[0] || this.lock)) continue;
+      const pd = this.mode === 'training' ? pads[0] : pads[p];
       let c = this.cur[p];
       const N = ROSTER.length, C = SEL_COLS, row = (c / C) | 0, rowStart = row * C, rowLen = Math.min(C, N - rowStart);
       if (pd.pressed.l) c = rowStart + ((c - rowStart - 1 + rowLen) % rowLen);
@@ -791,7 +866,7 @@ class SelectScene {
     if (taps.some(t => inRect(t, W / 2 - 90, 500, 180, 34))) { const p = this.done[0] ? 1 : 0; if (!this.done[p]) this.pickChar(p); }
   }
   pickChar(p) {
-    this.done[p] = true; AU.sfx('confirm'); sayName(ROSTER[this.cur[p]]);
+    this.done[p] = true; AU.sfx('confirm'); sayName(ROSTER[this.cur[p]]); this.lock = 10;
     this.pup[p].play('confirm', 'taunt');
     if (this.done[0] && this.done[1]) this.out = 1;
   }
@@ -802,7 +877,9 @@ class SelectScene {
       for (let i = others.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[others[i], others[j]] = [others[j], others[i]]; }
       GAME.ladder = others; GAME.idx = 0;
       startArcadeFight();
-    } else {
+    } else if (this.mode === 'tournament') startTournament();
+    else if (this.mode === 'training') { GAME.p2 = this.cur[1]; startTraining(); }
+    else {
       GAME.p2 = this.cur[1];
       const st = (Math.random() * STAGES.length) | 0;
       setScene(new VsScene(ROSTER[GAME.p1], ROSTER[GAME.p2], st, () => startVersusFight(st)));
@@ -813,9 +890,11 @@ class SelectScene {
     c.save();
     if (this.shake) c.translate(rand(-this.shake, this.shake), rand(-this.shake, this.shake) * 0.6);
     drawGridBg(c, this.t, '#ff5a5a');
-    bigTxt('CHOISISSEZ VOTRE ROBOT', W / 2, 40, 36);
+    const tr = this.mode === 'training';
+    bigTxt(tr && this.done[0] ? 'CHOISISSEZ LE MANNEQUIN' : 'CHOISISSEZ VOTRE ROBOT', W / 2, 40, 36);
+    if (this.mode === 'tournament' || tr) txt(tr ? 'TRAINING' : 'TOURNOI MONDIAL · 8 ROBOTS', W / 2, 70, 10, { color: '#9be7ff', stroke: '#000', sw: 4 });
     // grands aperçus
-    const showP2 = this.mode === 'versus';
+    const showP2 = this.two;
     for (let p = 0; p < (showP2 ? 2 : 1); p++) {
       const ch = ROSTER[this.cur[p]], left = p === 0;
       const x = left ? 150 : W - 150;
@@ -828,6 +907,7 @@ class SelectScene {
       const fl = c.createRadialGradient(x, 458, 4, x, 458, 120); fl.addColorStop(0, hexA(ch.accent, 0.55)); fl.addColorStop(1, hexA(ch.accent, 0));
       c.fillStyle = fl; c.beginPath(); c.ellipse(x, 458, 120, 22, 0, 0, 7); c.fill(); c.restore();
       drawRobotAny(c, ch, st.pose, x + st.dx * 1.55 * (left ? 1 : -1), 455 - st.dy * 1.55, left ? 1 : -1, 1.55, { yaw: st.yaw, st: this.done[p] ? 'win' : 'idle' });
+      if (tr && p === 1) txt('MANNEQUIN', x, 124, 10, { color: '#ffd23a', stroke: '#000', sw: 4 });
       if (this.done[p]) txt('PRÊT !', x, 140, 22, { font: FONT_BIG, italic: true, color: '#fff', stroke: '#000', sw: 6, glow: ch.accent, alpha: 0.6 + 0.4 * Math.sin(this.t * 0.2) });
       txt(ch.name, x, 82, 20, { color: '#fff', stroke: '#000', sw: 5, glow: ch.accent });
       txt(ch.maker + ' · ' + ch.country, x, 106, 9, { color: ch.accent, stroke: '#000', sw: 3 });
@@ -854,7 +934,7 @@ class SelectScene {
       txt(ch.name, r.x, r.y + r.s / 2 - 8, 7, { color: '#fff', stroke: '#000', sw: 3 });
     }
     for (let p = 0; p < 2; p++) {
-      if (p === 1 && this.mode !== 'versus') continue;
+      if (p === 1 && !(this.mode === 'versus' || (tr && this.done[0]))) continue;
       const r = this.tile(this.cur[p]), col = p ? '#4fb4ff' : '#ff3a3a';
       const on = this.done[p] || this.t % 20 < 14;
       if (!on) continue;
@@ -864,7 +944,7 @@ class SelectScene {
     if (isTouch) {
       c.fillStyle = 'rgba(255,210,58,.2)'; c.fillRect(W / 2 - 90, 500, 180, 34); c.strokeStyle = '#ffd23a'; c.strokeRect(W / 2 - 90, 500, 180, 34);
       txt('VALIDER', W / 2, 517, 12, { color: '#ffd23a' });
-    } else txt(this.mode === 'versus' ? 'J1 : ZQSD/WASD + F   ·   J2 : FLÈCHES + K' : 'Flèches + ENTRÉE pour valider', W / 2, 517, 9, { color: '#aaa' });
+    } else txt(this.mode === 'versus' ? 'J1 : ZQSD/WASD + F   ·   J2 : FLÈCHES + K' : tr ? 'Flèches + ENTRÉE : votre robot, puis le mannequin' : 'Flèches + ENTRÉE pour valider', W / 2, 517, 9, { color: '#aaa' });
     FX.draw(c);
     c.restore();
     if (this.flash) { c.fillStyle = `rgba(255,255,255,${this.flash / 14})`; c.fillRect(0, 0, W, H); }
@@ -959,6 +1039,210 @@ function startVersusFight(st) {
   setScene(new FightScene(f));
 }
 
+function startTraining() {
+  mergeKeyboards = true;
+  const f = new Fight(ROSTER[GAME.p1], ROSTER[GAME.p2], ROSTER[GAME.p2].stage, { training: true, versus: false, onEnd: () => setScene(new TitleScene(true)) });
+  setScene(new FightScene(f));
+}
+
+/* =================== TOURNOI (8 robots, élimination directe) =================== */
+const TOUR_ROUNDS = ['QUARTS DE FINALE', 'DEMI-FINALES', 'FINALE'];
+const BR_W = 112, BR_H = 40; // cases du tableau
+const TOUR_ROUND1 = ['QUART DE FINALE', 'DEMI-FINALE', 'FINALE'];
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[a[i], a[j]] = [a[j], a[i]]; } return a; }
+function startTournament() {
+  const others = shuffle(ROSTER.map((_, i) => i).filter(i => i !== GAME.p1)).slice(0, 7);
+  GAME.tour = { slots: shuffle([GAME.p1, ...others]), res: [[], [], []], score: [[], [], []], round: 0, lost: false, champion: false };
+  setScene(new BracketScene(-1));
+}
+// participants d'un tour (r = 0 : les 8 inscrits ; ensuite les vainqueurs du tour précédent)
+function tourEntrants(r) { const T = GAME.tour; return r === 0 ? T.slots : T.res[r - 1]; }
+function tourPlayerMatch(r) { const e = tourEntrants(r), k = e.indexOf(GAME.p1); return k < 0 ? -1 : k >> 1; }
+function startTourMatch() {
+  const T = GAME.tour, r = T.round, m = tourPlayerMatch(r), e = tourEntrants(r);
+  const opp = e[m * 2] === GAME.p1 ? e[m * 2 + 1] : e[m * 2];
+  const st = ROSTER[opp].stage;
+  setScene(new VsScene(ROSTER[GAME.p1], ROSTER[opp], st, () => {
+    mergeKeyboards = true;
+    const f = new Fight(ROSTER[GAME.p1], ROSTER[opp], st, {
+      cpu1: true, level: [3, 4, 6][r], versus: false,
+      onEnd: w => tourResult(w, opp, f.p[0].wins, f.p[1].wins)
+    });
+    setScene(new FightScene(f));
+  }, 'TOURNOI · ' + TOUR_ROUND1[r]));
+}
+function tourResult(w, opp, w0, w1) {
+  const T = GAME.tour, r = T.round, m = tourPlayerMatch(r), e = tourEntrants(r);
+  T.res[r][m] = w === 0 ? GAME.p1 : opp;
+  T.score[r][m] = w === 0 ? `${w0}-${w1}` : `${w1}-${w0}`;
+  // les autres combats du tour sont simulés (puissance, vitesse et un peu de chance)
+  for (let k = 0; k < e.length / 2; k++) {
+    if (k === m) continue;
+    const a = ROSTER[e[k * 2]], b = ROSTER[e[k * 2 + 1]];
+    const ra = a.power + a.speed * 0.6 + Math.random() * 0.9, rb = b.power + b.speed * 0.6 + Math.random() * 0.9;
+    T.res[r][k] = ra >= rb ? e[k * 2] : e[k * 2 + 1];
+    T.score[r][k] = Math.random() < 0.55 ? '2-0' : '2-1';
+  }
+  if (w !== 0) T.lost = true;
+  else if (r === 2) T.champion = true;
+  else T.round++;
+  setScene(new BracketScene(r));
+}
+class BracketScene {
+  constructor(reveal) {
+    this.t = 0; this.reveal = reveal; this.sel = 0; setTouchControls(false); FX.clear();
+    AU.playTrack(GAME.tour.champion ? TRACKS.win : TRACKS.select);
+    const T = GAME.tour;
+    if (T.champion) AU.say('Champion!', 0.5, 0.9);
+    else if (T.lost) AU.say('Eliminated', 0.5, 0.8);
+    else AU.say(TOUR_ROUNDS[T.round] === 'FINALE' ? 'Final' : T.round === 1 ? 'Semi finals' : 'Quarter finals', 0.5, 0.95);
+  }
+  // positions des cases : tour r, case k
+  box(r, k) {
+    const n = 8 >> r, half = n / 2, left = k < half, i = left ? k : k - half;
+    if (r === 3) return { x: W / 2, y: 342, left: true };
+    const xs = [72, 214, 350], x = left ? xs[r] : W - xs[r];
+    const ys = [[150, 206, 300, 356], [178, 328], [253]];
+    return { x, y: ys[r][i], left };
+  }
+  update() {
+    this.t++; FX.update(); const taps = tapQueue.splice(0), T = GAME.tour, pd = pads[0];
+    if (escPressed) { AU.sfx('select'); setScene(new TitleScene(true)); return; }
+    if (T.champion && this.t % 22 === 0) { const sd = Math.random() < 0.5; explosion(sd ? rand(60, 300) : rand(W - 300, W - 60), rand(140, 420), pick(['#ffd23a', '#ff3fd2', '#3fa9ff', '#4dff88']), 0.6); AU.sfx('hitL'); }
+    if (this.t < 50) return;
+    if (T.lost) { // éliminé : réessayer ou abandonner
+      if (pd.pressed.u || pd.pressed.d || pd.pressed.l || pd.pressed.r) { this.sel = 1 - this.sel; AU.sfx('move'); }
+      let ch = confirmPressed(pd) ? this.sel : -1;
+      for (const t of taps) for (let i = 0; i < 2; i++) if (inRect(t, W / 2 - 230 + i * 240, 470, 220, 40)) ch = i;
+      if (ch === 0) { AU.sfx('coin'); const r = T.round; T.res[r] = []; T.score[r] = []; T.lost = false; startTourMatch(); }
+      if (ch === 1) { AU.sfx('select'); setScene(new TitleScene(false)); }
+      return;
+    }
+    if (confirmPressed(pd) || taps.length) {
+      AU.sfx('confirm');
+      if (T.champion) setScene(new EndingScene(ROSTER[GAME.p1], 'tour'));
+      else startTourMatch();
+    }
+  }
+  drawSlot(c, idx, b, st) {
+    // st : 'win' (a passé le tour), 'out' (éliminé), 'me' (joueur), 'next' (prochain adversaire)
+    const w = BR_W, h = BR_H, x0 = b.x - w / 2, y0 = b.y - h / 2;
+    c.save();
+    c.fillStyle = 'rgba(6,10,22,.86)'; c.fillRect(x0, y0, w, h);
+    if (idx == null) {
+      c.strokeStyle = '#3a4250'; c.lineWidth = 1.5; c.strokeRect(x0, y0, w, h);
+      txt('?', b.x, b.y, 16, { color: '#55606e' });
+      c.restore(); return;
+    }
+    const ch = ROSTER[idx];
+    c.drawImage(portrait(ch, 84), x0 + 2, y0 + 2, h - 4, h - 4);
+    txt(ch.name.replace('UNITREE ', ''), x0 + h + 2, b.y, ch.name.length > 9 ? 8 : 9, { align: 'left', color: st === 'out' ? '#77808c' : '#fff', stroke: '#000', sw: 3 });
+    if (st === 'out') { c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(x0, y0, w, h); c.strokeStyle = '#ff3a3a'; c.lineWidth = 3; c.beginPath(); c.moveTo(x0 + 6, y0 + h - 6); c.lineTo(x0 + h - 6, y0 + 6); c.stroke(); }
+    const me = idx === GAME.p1;
+    c.strokeStyle = me ? '#ff3a3a' : st === 'next' ? '#ffd23a' : st === 'win' ? '#ffc21a' : '#4a5463';
+    c.lineWidth = me || st === 'next' ? 3 : 1.5;
+    if ((me || st === 'next') && this.t % 30 < 15 && !GAME.tour.lost) c.lineWidth = 4.5;
+    c.strokeRect(x0, y0, w, h);
+    if (me) txt('1P', x0 + w - 4, y0 - 7, 9, { align: 'right', color: '#ff3a3a', stroke: '#000', sw: 3 });
+    c.restore();
+  }
+  draw() {
+    const c = ctx, T = GAME.tour;
+    drawGridBg(c, this.t, T.champion ? '#ffd23a' : '#3fa9ff');
+    bigTxt('TOURNOI MONDIAL', W / 2, 40, 40);
+    const title = T.champion ? 'CHAMPION DU MONDE !' : T.lost ? 'ELIMINE...' : TOUR_ROUNDS[T.round];
+    txt(title, W / 2, 84, 16, { color: T.lost ? '#ff5a5a' : '#ffd23a', stroke: '#000', sw: 5, glow: T.lost ? '#ff0000' : '#ff9d1c' });
+    // trophée
+    this.drawTrophy(c, W / 2, 196, T.champion ? 1.25 : 1);
+    // lignes du tableau
+    const nextM = !T.lost && !T.champion ? tourPlayerMatch(T.round) : -1;
+    for (let r = 0; r < 3; r++) {
+      const e = tourEntrants(r);
+      for (let k = 0; k < (8 >> r); k++) {
+        const a = this.box(r, k), b = this.box(r + 1, k >> 1), m = k >> 1;
+        const won = T.res[r][m] != null && e[k] === T.res[r][m];
+        const shown = this.revealK(r, m) >= 1;
+        const hw = BR_W / 2, ax = a.left ? a.x + hw : a.x - hw, bx = b.left ? b.x - hw : b.x + hw, mx = (ax + bx) / 2;
+        c.strokeStyle = won && shown ? '#ffc21a' : 'rgba(150,170,200,.35)'; c.lineWidth = won && shown ? 3 : 1.5;
+        c.beginPath(); c.moveTo(ax, a.y);
+        if (r === 2) { c.lineTo(W / 2, a.y); c.lineTo(W / 2, b.y - BR_H / 2); } // finalistes → case du champion
+        else { c.lineTo(mx, a.y); c.lineTo(mx, b.y); c.lineTo(bx, b.y); }
+        c.stroke();
+      }
+    }
+    // cases
+    for (let r = 0; r <= 3; r++) {
+      const e = r === 3 ? (T.res[2][0] != null ? [T.res[2][0]] : []) : tourEntrants(r);
+      for (let k = 0; k < (8 >> r); k++) {
+        const b = this.box(r, k);
+        let idx = e[k];
+        if (r > 0 && idx != null && this.revealK(r - 1, k) < 1) idx = undefined; // révélation progressive
+        if (r === 3) { if (idx != null) { const k2 = this.revealK(2, 0); c.save(); c.globalAlpha = k2; this.drawSlot(c, idx, b, 'win'); c.restore(); } continue; }
+        let st = '';
+        if (idx != null && r < 3) {
+          const m = k >> 1, rw = T.res[r][m];
+          if (rw != null && this.revealK(r, m) >= 1) st = rw === idx ? 'win' : 'out';
+          else if (m === nextM && r === T.round && idx !== GAME.p1) st = 'next';
+        }
+        this.drawSlot(c, idx, b, st);
+        const m = k >> 1;
+        if (k % 2 === 0 && T.score[r][m] && this.revealK(r, m) >= 1) {
+          if (r === 2) txt('FINALE ' + T.score[r][m], W / 2, 388, 9, { color: '#9be7ff', stroke: '#000', sw: 3 });
+          else {
+            const b2 = this.box(r, k + 1), hw = BR_W / 2, nx = this.box(r + 1, m).x;
+            const gx = ((b.left ? b.x + hw : b.x - hw) + (b.left ? nx - hw : nx + hw)) / 2, gy = (b.y + b2.y) / 2 + (r === 0 ? 0 : 36);
+            c.fillStyle = 'rgba(6,10,22,.95)'; c.fillRect(gx - 14, gy - 8, 28, 16); c.strokeStyle = 'rgba(155,231,255,.5)'; c.lineWidth = 1; c.strokeRect(gx - 14, gy - 8, 28, 16);
+            txt(T.score[r][m], gx, gy, 7, { color: '#9be7ff' });
+          }
+        }
+      }
+    }
+    txt('QUARTS', 72, 116, 9, { color: '#8a96a8' }); txt('QUARTS', W - 72, 116, 9, { color: '#8a96a8' });
+    txt('DEMIES', 214, 144, 9, { color: '#8a96a8' }); txt('DEMIES', W - 214, 144, 9, { color: '#8a96a8' });
+    txt('FINALISTES', 350, 219, 8, { color: '#8a96a8' }); txt('FINALISTES', W - 350, 219, 8, { color: '#8a96a8' });
+    txt('CHAMPION', W / 2, 306, 10, { color: '#ffd23a' });
+    FX.draw(c);
+    // bas d'écran
+    if (this.t < 50) return;
+    if (T.lost) {
+      ['REESSAYER', 'ABANDONNER'].forEach((s, i) => {
+        const x = W / 2 - 230 + i * 240, sel = this.sel === i;
+        c.fillStyle = sel ? 'rgba(255,210,58,.2)' : 'rgba(5,10,25,.8)'; c.fillRect(x, 470, 220, 40);
+        c.strokeStyle = sel ? '#ffd23a' : '#555'; c.lineWidth = 2; c.strokeRect(x, 470, 220, 40);
+        txt(s, x + 110, 490, 14, { color: sel ? '#ffd23a' : '#ccc', stroke: '#000', sw: 4 });
+      });
+    } else if (T.champion) txt('Appuyez pour la cérémonie', W / 2, 500, 12, { color: '#fff', stroke: '#000', sw: 4, alpha: this.t % 50 < 34 ? 1 : 0.3 });
+    else {
+      const e = tourEntrants(T.round), m = tourPlayerMatch(T.round), opp = e[m * 2] === GAME.p1 ? e[m * 2 + 1] : e[m * 2];
+      txt(`${TOUR_ROUND1[T.round]} : ${ROSTER[GAME.p1].name}  VS  ${ROSTER[opp].name}`, W / 2, 470, 13, { color: '#fff', stroke: '#000', sw: 4 });
+      txt(isTouch ? 'Touchez pour combattre' : 'Appuyez pour combattre', W / 2, 500, 11, { color: '#ffd23a', stroke: '#000', sw: 4, alpha: this.t % 50 < 34 ? 1 : 0.3 });
+    }
+  }
+  // 0 → 1 : apparition des résultats du tour qui vient de se jouer
+  revealK(r, m) {
+    if (r !== this.reveal) return 1;
+    return clamp((this.t - 20 - m * 14) / 10, 0, 1);
+  }
+  drawTrophy(c, x, y, s) {
+    c.save(); c.translate(x, y); c.scale(s, s);
+    const g = c.createLinearGradient(-40, 0, 40, 0);
+    g.addColorStop(0, '#8a5a00'); g.addColorStop(0.35, '#ffe27a'); g.addColorStop(0.55, '#fff6c8'); g.addColorStop(1, '#a06a00');
+    c.shadowColor = '#ffb000'; c.shadowBlur = 24 + Math.sin(this.t * 0.08) * 8;
+    c.fillStyle = g; c.strokeStyle = '#4a2a00'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(-34, -46); c.lineTo(34, -46); c.quadraticCurveTo(32, 0, 8, 10); c.lineTo(8, 28); c.lineTo(22, 38); c.lineTo(-22, 38); c.lineTo(-8, 28); c.lineTo(-8, 10); c.quadraticCurveTo(-32, 0, -34, -46); c.closePath(); c.fill(); c.stroke();
+    c.shadowBlur = 0;
+    c.lineWidth = 5; c.strokeStyle = '#d9a520';
+    c.beginPath(); c.arc(-36, -26, 14, Math.PI * 0.55, Math.PI * 1.55); c.stroke();
+    c.beginPath(); c.arc(36, -26, 14, -Math.PI * 0.55, Math.PI * 0.45); c.stroke();
+    c.fillStyle = '#2a1a00'; c.fillRect(-28, 38, 56, 12);
+    c.fillStyle = '#ffd23a'; c.font = 'bold 9px ' + FONT_BIG; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('WRL', 0, 44);
+    // robot champion dans la coupe
+    const champ = GAME.tour.res[2][0];
+    if (champ != null && this.revealK(2, 0) >= 1) c.drawImage(portrait(ROSTER[champ], 84), -20, -40, 40, 40);
+    c.restore();
+  }
+}
+
 /* =================== CONTINUE / GAME OVER =================== */
 class ContinueScene {
   constructor() { this.t = 0; this.n = 9; setTouchControls(false); AU.stopMusic(); AU.say('Continue?'); }
@@ -998,7 +1282,7 @@ class ResultScene {
 
 /* =================== FIN (CHAMPION) =================== */
 class EndingScene {
-  constructor(ch) { this.ch = ch; this.t = 0; setTouchControls(false); FX.clear(); AU.playTrack(TRACKS.win); AU.say('Congratulations! ' + ch.name + ' is the world robot champion!', 0.5, 0.9); }
+  constructor(ch, kind) { this.ch = ch; this.kind = kind; this.t = 0; setTouchControls(false); FX.clear(); AU.playTrack(TRACKS.win); AU.say('Congratulations! ' + ch.name + (kind === 'tour' ? ' wins the world tournament!' : ' is the world robot champion!'), 0.5, 0.9); }
   update() {
     this.t++; FX.update(); const taps = tapQueue.splice(0);
     if (this.t % 25 === 0) {
@@ -1016,8 +1300,8 @@ class EndingScene {
     c.fillStyle = g; c.fillRect(0, 0, W, H);
     drawRobotAny(c, this.ch, pose, W / 2, 500, 1, 2.1);
     bigTxt('FÉLICITATIONS !', W / 2, 64, 56);
-    txt(this.ch.name + ' est le champion', W / 2, 118, 16, { color: '#fff', stroke: '#000', sw: 5 });
-    txt('du monde des robots !', W / 2, 142, 16, { color: '#fff', stroke: '#000', sw: 5 });
+    txt(this.ch.name + (this.kind === 'tour' ? ' remporte le' : ' est le champion'), W / 2, 118, 16, { color: '#fff', stroke: '#000', sw: 5 });
+    txt(this.kind === 'tour' ? 'TOURNOI MONDIAL DES ROBOTS !' : 'du monde des robots !', W / 2, 142, 16, { color: this.kind === 'tour' ? '#ffd23a' : '#fff', stroke: '#000', sw: 5 });
     if (this.t > 180) txt('Appuyez pour revenir au titre', W / 2, 515, 10, { color: '#aaa', alpha: this.t % 60 < 40 ? 1 : 0.3 });
   }
 }

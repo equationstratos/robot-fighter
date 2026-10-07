@@ -1,49 +1,32 @@
 # ROBOT FIGHTER II — The Humanoid Warriors
 
-Jeu de combat arcade en HTML5 façon *Street Fighter II* avec de **vrais robots humanoïdes** rendus en 3D temps réel (Three.js) :
-Optimus Gen 2 (Tesla), Atlas électrique (Boston Dynamics), Figure 02, ASIMO (Honda), Unitree H1,
-Ameca (Engineered Arts), Digit (Agility Robotics), T800 (EngineAI, combats REK) et Apollo (Apptronik).
+Jeu de combat HTML5 façon Street Fighter II avec de vrais robots humanoïdes :
+Optimus (Tesla), Atlas (Boston Dynamics), Figure 02, ASIMO (Honda), Unitree H1,
+Ameca (Engineered Arts), Digit (Agility Robotics), T800 (EngineAI · REK), Apollo (Apptronik).
 
-## Jouer
+Ouvrir `index.html` via un serveur web (ex. `python3 -m http.server`) puis jouer.
 
-Le jeu est un site statique : il suffit de servir le dossier avec n'importe quel serveur web.
+## Modes (écran titre)
+- **ARCADE** (1 joueur) : tous les autres robots à la suite, IA de plus en plus forte, CONTINUE.
+- **VERSUS** (2 joueurs) : clavier partagé, manettes ou tactile.
+- **TOURNOI** (8 robots) : tableau à élimination directe — quarts, demi-finales, finale — avec
+  les autres combats simulés, scores 2-0 / 2-1, possibilité de réessayer un match perdu et
+  cérémonie du champion.
+- **TRAINING** : choix de votre robot puis du mannequin ; chrono infini, vie qui se recharge,
+  jauge SUPER infinie (réglable), compteur de dégâts / combo / record ; mannequin
+  DEBOUT, ACCROUPI, SAUTE, GARDE (bloque tout) ou CPU qui riposte ; ÉCHAP ouvre le menu training
+  (réglages, replacer les robots, liste des coups, changer de robots).
+- **COMMANDES** : rappel des touches et manipulations.
 
-```bash
-python3 -m http.server 8000
-# puis ouvrir http://localhost:8000
-```
+## Combat
+- Rendu 3D temps réel (Three.js) sur les décors des vidéos, caméra cinématique, reflets au sol.
+- Coups de boxe française / MMA (fouetté, chassé, retourné, genou sauté, balayette), projections,
+  prises inédites d'Atlas (TORSION 360, MOULINET 720), boules d'énergie, uppercuts, SUPER avec cinématique.
+- Effets : étincelles, éclats métalliques, hit-stop, tremblement, ralenti au K.O., combos.
 
-Pour le publier gratuitement : *Settings → Pages → Deploy from a branch → main / (root)* (dépôt public requis sur un compte gratuit).
-
-## Contenu
-
-- Écran titre avec les vidéos d'intro, PRESS START, modes Arcade (1 joueur), Versus (2 joueurs) et Commandes
-- Sélection des robots (ils réagissent : entrée, démonstrations de coups, explosion de validation), écran VS animé
-- Combats en 2 manches gagnantes, chrono 99, garde, combos
-- Coups de pied façon boxe française / MMA (fouetté, high kick, chassé frontal, retourné, genou sauté, low kick, balayage)
-- Projections pour chaque robot (suplex, o-goshi, double-leg) et prises contorsionnistes d'Atlas (moteurs 360°)
-- Coups spéciaux par robot et SUPER avec bandeau en gros plan
-- Décors réels tirés des vidéos (labo néon, entrepôt arcade), ombres, reflets au sol, bloom, caméra cinématique
-- IA progressive, clavier 2 joueurs, manette, contrôles tactiles, clic souris (poing / pied)
-- Qualité graphique adaptative pour les mobiles
-
-## Commandes (clavier)
-
-| | Joueur 1 | Joueur 2 |
-|---|---|---|
-| Déplacement | W A S D | Flèches |
-| Poings léger / fort | F / G | K / L |
-| Pieds léger / fort | V / B | , / . |
-| Spécial 1 / 2 / SUPER | R / T / Y | I / O / P |
-
-- Projectile ↓↘→ + P · uppercut / salto →↓↘ + P/K · ruée / toupie ↓↙← + P/K · SUPER ↓↘→↓↘→ + P
-- Projection : → ou ← + HP au contact · Chassé frontal : → + LK · Retourné : → + HK · Genou sauté : → + HP
-
-## Structure
-
-- `index.html` — page du jeu
-- `js/core.js` — canvas, entrées, audio · `js/robots.js` — roster, poses, squelette · `js/fight.js` — combat, coups, prises, IA
-- `js/scenes.js` — écrans, HUD, boucle · `js/render3d.js` — rendu 3D · `js/kit.js` — kit de modélisation des robots
-- `js/models/<robot>.js` — un modèle 3D par robot (contrat décrit en tête de `js/kit.js`)
-- `tools/viewer.html`, `tools/shoot.js` — prévisualisation / capture d'un modèle (`node tools/shoot.js atlas out.png`)
-- `vendor/three-bundle.js` — Three.js r160 (licence MIT, voir `vendor/THREE-LICENSE.txt`)
+## Robots 3D
+- Unitree H1, Apptronik Apollo et les jambes de Digit (Agility Cassie) utilisent les **maillages
+  officiels** des constructeurs publiés dans MuJoCo Menagerie (voir `js/meshes/README.md` pour les
+  sources et licences BSD-3 / Apache-2.0 / MIT), convertis par `tools/mjcf2rk.py`.
+- Les autres robots sont modélisés à la main d'après des photos (`js/models/*.js`).
+- `node tools/shoot.js <robot> sortie.png` produit une planche de prévisualisation d'un modèle.

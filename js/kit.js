@@ -188,8 +188,88 @@ const RK = (function () {
     };
     ctx.group = (...children) => { const gr = new T.Group(); children.forEach(c => c && gr.add(c)); return gr; };
     ctx.add = (parent, geo, mat, o) => { const m = ctx.mesh(geo, mat, o); parent.add(m); return m; };
+    // maillages réels (CAO officielle, voir realData / real plus bas)
+    ctx.realData = (id) => realData(id);
+    ctx.realMatrix = (o) => realMatrix(o);
+    ctx.real = (id, sel, mat, o = {}) => {
+      const gr = new T.Group(), data = realData(id);
+      if (!data) return gr;
+      const M4 = realMatrix(o), test = realSel(sel);
+      data.geoms.forEach((gm, gi) => {
+        if (!test(gm)) return;
+        const geo = realGeo(id, gi, ctx.lod === 'low', o.crease == null ? 32 : o.crease);
+        const mm = typeof mat === 'function' ? mat(gm) : mat;
+        if (!mm) return;
+        const m = new T.Mesh(geo, mm);
+        m.matrixAutoUpdate = false; m.matrix.copy(M4);
+        if (o.shadow === false) m.userData.noShadow = true;
+        gr.add(m);
+      });
+      return gr;
+    };
     ctx._reg = reg; ctx._glow = glowReg;
     return ctx;
+  }
+
+  /* ---------------- maillages réels (CAO officielle) ----------------
+     Fichiers js/meshes/<id>.js générés par tools/mjcf2rk.py depuis MuJoCo Menagerie :
+     window.RK_MESH[id] = { bodies: {nom: [x,y,z]}, joints: {nom: {body, p, axis}}, geoms: [{name, mesh, body, rgba, tri, ...}] }
+     Coordonnées : cm réels, pose de repos debout, axes du jeu (X avant, Y haut, Z côté DROIT du robot).
+     ctx.real(id, sel, mat, o) → Group de meshes placés dans le repère d'une pièce :
+       sel : nom de géométrie | tableau de noms | RegExp (testée sur name puis body) | fonction(geom) => bool
+       mat : matériau | fonction(geom) => matériau (null = ignorer la géométrie)
+       o.pivot [x,y,z] : point réel (cm) qui devient l'origine de la pièce (articulation)
+       o.frame : 'body' (torse/tête/pied : axes inchangés) | 'limb' (membre qui pend : +Y le long de l'os vers
+                 le bas, avant = -X ; rotation 180° autour de Z) | 'hand' (+X = vers le bas, prolongement de
+                 l'avant-bras ; paume côté -Y = arrière du robot)
+       o.k : échelle réel → design ; o.s [sx,sy,sz] : étirement en plus (repère de la pièce, ex. sy pour
+             ajuster la longueur d'un os) ; o.r [rx,ry,rz] : rotation en plus (radians) ; o.p [x,y,z] : décalage
+       o.to [x,y,z] (avec frame 'limb' ou 'hand') : l'os réel pivot → to (dans le plan XY) est aligné sur l'axe
+             de la pièce (+Y pour 'limb', +X pour 'hand') ; o.len : longueur de l'os voulue (unités design),
+             l'étirement le long de l'os est alors calculé automatiquement (ex. o.len = ctx.L.th)
+       o.crease : angle (°) au-delà duquel une arête est vive (normales facettées), défaut 32
+     ctx.realMatrix(o) → la Matrix4 correspondante (pour placer des détails procéduraux au même endroit).
+     ctx.lod === 'low' utilise automatiquement le niveau simplifié. */
+  const realCache = {};
+  function realData(id) { return (window.RK_MESH && window.RK_MESH[id]) || null; }
+  function b64buf(s) { const bin = atob(s), n = bin.length, u = new Uint8Array(n); for (let i = 0; i < n; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
+  function realGeo(id, gi, low, crease) {
+    const key = `${id}|${gi}|${low ? 1 : 0}|${crease}`;
+    if (realCache[key]) return realCache[key];
+    const gm = realData(id).geoms[gi];
+    const b = low ? gm.lb : gm.b, q = new Int16Array(b64buf(low ? gm.lv : gm.v));
+    const idx = (low ? gm.li32 : gm.i32) ? new Uint32Array(b64buf(low ? gm.li : gm.i)) : new Uint16Array(b64buf(low ? gm.li : gm.i));
+    const pos = new Float32Array(q.length);
+    for (let i = 0; i < q.length; i += 3) for (let k = 0; k < 3; k++) pos[i + k] = b[k] + (q[i + k] + 32768) / 65535 * (b[k + 3] - b[k]);
+    let geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    geo.setIndex(new T.BufferAttribute(idx, 1));
+    geo = BGU.toCreasedNormals ? BGU.toCreasedNormals(geo, crease * D) : (geo.computeVertexNormals(), geo);
+    geo.computeBoundingSphere();
+    return (realCache[key] = geo);
+  }
+  function realSel(sel) {
+    if (typeof sel === 'function') return sel;
+    if (sel instanceof RegExp) return (gm) => sel.test(gm.name) || sel.test(gm.body);
+    const list = Array.isArray(sel) ? sel : [sel];
+    return (gm) => list.includes(gm.name);
+  }
+  const FRAMES = { body: new T.Matrix4(), limb: new T.Matrix4().makeRotationZ(Math.PI), hand: new T.Matrix4().makeRotationZ(Math.PI / 2) };
+  function realMatrix(o = {}) {
+    const k = o.k || 1, s = o.s || [1, 1, 1], pv = o.pivot || [0, 0, 0], p = o.p || [0, 0, 0], r = o.r || [0, 0, 0];
+    const M4 = new T.Matrix4().makeTranslation(p[0], p[1], p[2]);
+    M4.multiply(new T.Matrix4().makeRotationFromEuler(new T.Euler(r[0], r[1], r[2])));
+    let sx = s[0], sy = s[1];
+    let F = FRAMES[o.frame || 'body'] || FRAMES.body;
+    if (o.to && (o.frame === 'limb' || o.frame === 'hand')) { // os réel pivot → to aligné sur l'axe de la pièce
+      const dx = o.to[0] - pv[0], dy = o.to[1] - pv[1], a = Math.atan2(dy, dx), len = Math.hypot(dx, dy);
+      F = new T.Matrix4().makeRotationZ(o.frame === 'limb' ? Math.PI / 2 - a : -a);
+      if (o.len) { if (o.frame === 'limb') sy *= o.len / (k * len); else sx *= o.len / (k * len); }
+    }
+    M4.multiply(new T.Matrix4().makeScale(k * sx, k * sy, k * s[2]));
+    M4.multiply(F);
+    M4.multiply(new T.Matrix4().makeTranslation(-pv[0], -pv[1], -pv[2]));
+    return M4;
   }
 
   /* ---------------- main articulée ---------------- */
@@ -372,6 +452,6 @@ const RK = (function () {
     if (rb.flashK === k) return; rb.flashK = k;
     for (const m of rb.mats) if (m.emissive) m.emissive.setScalar(k);
   }
-  const api = { T, g, tex, hand, models, build, pose, setFlash, PLATES, REQUIRED };
+  const api = { T, g, tex, hand, models, build, pose, setFlash, PLATES, REQUIRED, realData, realMatrix };
   return api;
 })();

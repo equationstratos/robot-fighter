@@ -29,7 +29,7 @@ const ROSTER = [
     bio: 'La légende japonaise, pionnier des robots marcheurs depuis 2000.' },
   { id: 'h1', name: 'UNITREE H1', full: 'H1', maker: 'UNITREE', country: 'CHINE', year: 2023,
     body: '#3a3d44', trim: '#1a1b1f', joint: '#5a5e66', accent: '#4dff88', visor: '#050506', head: 'h1',
-    scale: 1.06, leg: 1.08, bulk: 0.9, chest: 0.92, speed: 1.15, power: 0.95, stage: 2,
+    scale: 1.15, leg: 0.85, bulk: 0.9, chest: 0.92, speed: 1.15, power: 0.95, stage: 2,
     proj: { name: 'VOLT SPHERE', style: 'orb', color: '#4dff88', core: '#eafff1' },
     move: 'rush', moveName: 'SPEED RECORD', sup: 'rush', supName: 'HYPERSPEED BARRAGE', throwType: 'takedown', throwName: 'DOUBLE-LEG SLAM',
     bio: 'Détenteur du record de vitesse des humanoïdes : 3,3 m/s.' },
@@ -146,10 +146,23 @@ function skeleton(ch, p, face, sc = 1) {
   // jambes
   const ks = ch.revKnee ? -1 : 1;
   P.fhi = { x: off * 0.6, y: 0 }; P.bhi = { x: -off * 0.6, y: 0 };
-  const fk = ch.revKnee ? -p.fk * 0.8 : p.fk, bk = ch.revKnee ? -p.bk * 0.8 : p.bk;
-  const fh = ch.revKnee ? p.fh + p.fk * 0.55 : p.fh, bh = ch.revKnee ? p.bh + p.bk * 0.55 : p.bh;
-  P.fkn = ang(P.fhi, fh, L.th); P.ffo = ang(P.fkn, fh - fk, L.sh);
-  P.bkn = ang(P.bhi, bh, L.th); P.bfo = ang(P.bkn, bh - bk, L.sh);
+  const fk = p.fk, bk = p.bk, fh = p.fh, bh = p.bh;
+  if (ch.revKnee) {
+    // genoux inversés (autruche) : pieds placés comme ceux d'un robot à genoux normaux (même gameplay),
+    // genou en miroir derrière la ligne hanche → pied, un peu plus fléchi sur la jambe d'appui (posture de Digit)
+    for (const [sd, h, k] of [['f', p.fh, p.fk], ['b', p.bh, p.bk]]) {
+      const H = P[sd + 'hi'], Kn = ang(H, h, L.th), Fn = ang(Kn, h - k, L.sh);
+      const dx = Fn.x - H.x, dy = Fn.y - H.y, d0 = Math.hypot(dx, dy) || 1, ux = dx / d0, uy = dy / d0;
+      const d = Math.min(d0 * (1 - 0.075 * Math.pow(Math.max(0, uy), 8)), (L.th + L.sh) * 0.9995);
+      const along = (L.th * L.th - L.sh * L.sh + d * d) / (2 * d), hh = Math.sqrt(Math.max(0, L.th * L.th - along * along));
+      const cr = ux * (Kn.y - H.y) - uy * (Kn.x - H.x), sg = Math.abs(cr) > 1e-6 ? (cr > 0 ? -1 : 1) : face * (uy < 0 ? -1 : 1);
+      P[sd + 'kn'] = { x: H.x + ux * along - uy * hh * sg, y: H.y + uy * along + ux * hh * sg };
+      P[sd + 'fo'] = { x: H.x + ux * d, y: H.y + uy * d };
+    }
+  } else {
+    P.fkn = ang(P.fhi, fh, L.th); P.ffo = ang(P.fkn, fh - fk, L.sh);
+    P.bkn = ang(P.bhi, bh, L.th); P.bfo = ang(P.bkn, bh - bk, L.sh);
+  }
   P._fshin = fh - fk; P._bshin = bh - bk; P._ks = ks;
   // rotation globale autour du centre du torse
   if (p.rot) {

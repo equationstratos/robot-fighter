@@ -699,7 +699,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
     const tick = ctx.override ? undefined : (t, state) => {
       const sup = state && (state.st === 'super' || state.st === 'special');
       LED.emissiveIntensity = LED.userData.baseI * ((sup ? 1.6 : 0.75) + 0.25 * Math.sin(t * 2.2));
-      for (const [k, toe] of toes) toe.rotation.z = Math.min(38 * D, Math.max(0, -P[k].rotation.z * 0.85));
+      for (let i = 0; i < toes.length; i++) toes[i][1].rotation.z = Math.min(38 * D, Math.max(0, -P[toes[i][0]].rotation.z * 0.85));
       texts.scale.z = state && state.face < 0 ? -1 : 1;
     };
     return { parts: P, shZ: 23.5, hpZ: 10.5, tick };
