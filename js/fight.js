@@ -468,7 +468,7 @@ class Fighter {
       if (t === 6) { this.vy = -17; this.vx = f * 2.6; this.grav = 0.55; AU.sfx('upper'); dust(this.x, GROUND, 12); }
       if (t >= 6) {
         this.ghostOn = true;
-        const p = this.wp(ch.move === 'flip' ? 'ffo' : 'fha');
+        const p = this.wp(ch.move === 'flip' || ch.kicker ? 'ffo' : 'fha');
         FX.add({ type: 'glow', x: p.x, y: p.y, size: rand(26, 44), life: 18, max: 18, col: ch.accent, core: '#fff' });
         if (t % 3 === 0) FX.add({ type: 'bolt', x: this.x + rand(-80, 80), y: this.hipY - 140, x2: this.x + rand(-40, 40), y2: this.hipY + 20, life: 6, max: 6, col: '#cfe8ff' });
         if (t > 10 && !this.air) { this.ghostOn = false; this.grav = 0.75; this.vx = 0; this.inv = 0; this.landRec = 22; this.setSt('land'); }
@@ -695,7 +695,7 @@ class Fighter {
         return lerpPose(POSES.proj, POSES.idle, (t - 84) / 20);
       case 'storm':
         if (t < 6) return lerpPose(POSES.idle, POSES.crouch, t / 6);
-        if (ch.move === 'flip') return { ...POSES.flip, rot: -((t - 6) * 22) % 360 };
+        if (ch.move === 'flip' || ch.kicker) return { ...POSES.flip, rot: -((t - 6) * 22) % 360 };
         return { ...POSES.upper, sx: Math.cos((t - 6) * 0.5), spin: (t - 6) * 0.5 };
       case 'rush':
         if (t < 10) return lerpPose(POSES.idle, POSES.rushWind, easeOut(t / 10));
@@ -744,7 +744,7 @@ class Fighter {
     if (!m || !active || !m.limb) return null;
     const maxHits = m.hits || 1;
     if (this.hitN >= maxHits || this.hitCD > 0) return null;
-    const limbK = this.st === 'super' && this.sp === 'storm' && this.ch.move === 'flip' ? 'ffo' : m.limb;
+    const limbK = this.st === 'super' && this.sp === 'storm' && (this.ch.move === 'flip' || this.ch.kicker) ? 'ffo' : m.limb;
     const p = this.wp(limbK);
     return { x: p.x, y: p.y, r: m.r * this.ch.scale, mv: m };
   }

@@ -291,12 +291,12 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
   })();
   // membres : origine = articulation proximale, +Y vers l'extrémité ; AVANT = -X (xn), extérieur = +Z (zp)
   const UA = prof(LL, [
-    { y: -1, x: 4.5, z: 4.6, r: 3.3 },
-    { y: 6, xp: 5.0, xn: 5.0, zp: 5.2, zn: 5.0, r: 3.7 },
-    { y: 14, xp: 5.1, xn: 5.1, zp: 5.2, zn: 5.0, r: 3.8 },
-    { y: 21, xp: 4.9, xn: 4.9, zp: 5.0, zn: 4.8, r: 3.7 },
-    { y: 28, xp: 4.8, xn: 4.8, zp: 4.9, zn: 4.7, r: 3.6 },
-    { y: 34, xp: 4.6, xn: 4.6, zp: 4.7, zn: 4.5, r: 3.4 }
+    { y: -1, x: 4.2, z: 4.3, r: 3.2 },
+    { y: 6, xp: 4.65, xn: 4.65, zp: 4.8, zn: 4.65, r: 3.6 },
+    { y: 14, xp: 4.75, xn: 4.75, zp: 4.85, zn: 4.7, r: 3.65 },
+    { y: 21, xp: 4.6, xn: 4.6, zp: 4.7, zn: 4.55, r: 3.55 },
+    { y: 28, xp: 4.5, xn: 4.5, zp: 4.6, zn: 4.45, r: 3.5 },
+    { y: 34, xp: 4.4, xn: 4.4, zp: 4.5, zn: 4.3, r: 3.4 }
   ], { b: 0.1 });
   const FA = prof(LL, [
     { y: -1, xp: 4.8, xn: 4.8, zp: 5.0, zn: 4.8, r: 3.6 },
@@ -327,13 +327,19 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
   // pied : profil le long de +X (axis 'x') ; x du profil = -Y du pied (xp = vers le bas, xn = vers le haut)
   const footTab = (rows, rp, rn, b) => prof(LL, rows.map(([x, yb, yt, w]) => ({ y: x, x0: -(yb + yt) / 2, x: (yt - yb) / 2, z: w, rp, rn })), { b });
   const FT = footTab([
-    [-8.0, -4.4, -1.4, 3.2], [-7.2, -4.6, 0.8, 4.5], [-4.5, -4.6, 2.2, 5.0], [0, -4.6, 2.4, 5.1], [3.5, -4.6, 1.2, 5.2],
-    [7.5, -4.6, -1.0, 5.3], [11.5, -4.6, -2.3, 5.2], [15, -4.6, -3.0, 4.7], [17.4, -4.6, -3.6, 3.6], [18.4, -4.5, -4.1, 1.9]
-  ], 0.9, 2.8, 0.3);
+    [-8.2, -4.4, -0.6, 3.6], [-7.4, -4.6, 1.8, 5.0], [-4.5, -4.6, 3.0, 5.4], [0, -4.6, 3.2, 5.5], [3.5, -4.6, 2.2, 5.6],
+    [7.5, -4.6, 0.4, 5.7], [11.5, -4.6, -1.0, 5.6], [15, -4.6, -2.0, 5.2], [17.6, -4.6, -2.9, 4.1], [18.7, -4.5, -3.7, 2.2]
+  ], 0.9, 3.2, 0.3);
   const SOLE = footTab([
-    [-8.4, -6.5, -4.4, 3.4], [-7.6, -6.6, -4.4, 4.8], [-4.5, -6.6, -4.4, 5.3], [0, -6.6, -4.4, 5.4], [3.5, -6.6, -4.4, 5.5],
-    [7.5, -6.6, -4.4, 5.6], [11.5, -6.6, -4.4, 5.5], [15, -6.5, -4.4, 5.0], [17.6, -6.3, -4.4, 3.9], [18.9, -5.9, -4.4, 2.1]
+    [-8.5, -6.5, -4.4, 3.6], [-7.7, -6.6, -4.4, 5.05], [-4.5, -6.6, -4.4, 5.5], [0, -6.6, -4.4, 5.6], [3.5, -6.6, -4.4, 5.7],
+    [7.5, -6.6, -4.4, 5.8], [11.5, -6.6, -4.4, 5.7], [15, -6.5, -4.4, 5.25], [17.7, -6.3, -4.4, 4.1], [19.0, -5.9, -4.4, 2.2]
   ], 0.6, 0.5, 0);
+
+  // pied « bloc » pour le LOD bas (semelle + tige en un seul volume)
+  const FLO = footTab([
+    [-8.4, -6.6, -0.6, 3.6], [-7.4, -6.6, 1.8, 5.0], [-4.5, -6.6, 3.0, 5.4], [0, -6.6, 3.2, 5.5], [3.5, -6.6, 2.2, 5.6],
+    [7.5, -6.6, 0.4, 5.7], [11.5, -6.6, -1.0, 5.6], [15, -6.5, -2.0, 5.2], [17.6, -6.3, -2.9, 4.1], [18.9, -5.9, -3.7, 2.2]
+  ], 0.8, 3.0, 0);
 
   let GRILLE = null; // texture de grille fine (bande « haut-parleur » des bras)
 
@@ -345,17 +351,18 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
     const add = (parent, geo, mat, p, r, s) => { nMesh++; return ctx.add(parent, geo, mat, { p, r, s }); };
 
     /* ---------- matériaux ---------- */
-    const GS = ctx.mat({ color: 0x474b52, roughness: 0.44, metalness: 0.22, clearcoat: 0.5, clearcoatRoughness: 0.32, envMapIntensity: 0.9 });   // coque gris anthracite satinée
+    const GS = ctx.mat({ color: 0x51565e, roughness: 0.4, metalness: 0.25, clearcoat: 0.55, clearcoatRoughness: 0.28, envMapIntensity: 1.0 });   // coque gris anthracite satinée
     const GS2 = ctx.mat({ color: 0x3c3f45, roughness: 0.48, metalness: 0.2, clearcoat: 0.4, clearcoatRoughness: 0.36, envMapIntensity: 0.85 }); // panneau un ton plus sombre
     const GD = ctx.mat({ color: 0x2f3237, roughness: 0.3, metalness: 0.35, clearcoat: 0.85, clearcoatRoughness: 0.12, envMapIntensity: 1.0 });   // rotules gris foncé laquées
     const BK = ctx.mat({ color: 0x121316, roughness: 0.48, metalness: 0.45, clearcoat: 0.2, clearcoatRoughness: 0.5, envMapIntensity: 0.7 });     // mécanique noire satinée
     const NB = ctx.mat({ color: 0x0a0b0d, roughness: 0.14, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.2 });     // noir laqué (tête, mains, chaussures)
     const GB = ctx.mat({ color: 0x484c53, roughness: 0.2, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.1 });     // rotules d'épaule laquées
     const HB = ctx.mat({ color: 0x141518, roughness: 0.34, metalness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.28, envMapIntensity: 0.8 });     // mains (noir satiné-brillant)
+    const HP = ctx.mat({ color: 0x17181c, roughness: 0.5, metalness: 0.25, clearcoat: 0.35, clearcoatRoughness: 0.4, envMapIntensity: 0.7 });      // capot dorsal de main
     const VI = M.visor, SE = M.seam, ST = M.steel;
     const RU = ctx.mat({ color: 0x1b1c1f, roughness: 0.75, metalness: 0.05, envMapIntensity: 0.35 });
     const WT = ctx.mat({ color: 0xe8ebef, roughness: 0.45, metalness: 0.05, clearcoat: 0.4, envMapIntensity: 0.6 });                              // marquages blancs
-    const BZ = ctx.mat({ color: 0x8d939c, roughness: 0.3, metalness: 0.7, clearcoat: 0.5, envMapIntensity: 1.2 });                // bagues de caméra
+    const BZ = ctx.mat({ color: 0xc4c9d0, roughness: 0.32, metalness: 0.35, clearcoat: 0.6, envMapIntensity: 1.0 });                // bagues de caméra
     const LENS = ctx.mat({ color: 0x0a0f1a, roughness: 0.03, metalness: 0.4, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.5 });
     const LED = ctx.glow(ch.accent, 2.6);           // logo facial lumineux
     const LEDS = ctx.glow(0x7f78ff, 2.2);           // voyants d'état (col, bas du buste)
@@ -374,6 +381,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
       const m = new T.Matrix4().compose(va.clone().add(vb).multiplyScalar(0.5), new T.Quaternion().setFromUnitVectors(YV, d.normalize()), new T.Vector3(1, 1, 1));
       return [g.cyl(r, r, l, seg), null, m];
     };
+    const screw = (r = 0.34) => g.cyl(r, r * 0.8, 0.12, 6);   // tête de vis (bon marché en triangles)
     const mirrorGroups = [];   // marquages : restent lisibles quand le robot regarde à gauche
     const markGroup = (parent) => { const gr = ctx.group(); gr.userData.noMerge = true; parent.add(gr); mirrorGroups.push(gr); return gr; };
 
@@ -388,7 +396,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
       for (const z of [1, -1]) add(torso, g.cyl(6.2, 6.2, 9.8, 10, 'z'), GS, [0, 0, z * 12.7]);
       P.torso = torso;
       P.neck = ctx.group(ctx.mesh(g.cyl(3.8, 5.2, 10, 8), BK, { p: [0, 5, 0] }));
-      P.head = ctx.group(ctx.mesh(loft('figLoHD', HEAD, -10.6, 11.6, 8, { capB: true, capT: true }), NB));
+      P.head = ctx.group(ctx.mesh(loft('figLoHD', HEAD, -11.6, 11.4, 8, { capB: true, capT: true }), NB, { p: [0, -1, 0] }));
       for (const [sd, z] of [['f', 1], ['b', -1]]) {
         P[sd + 'sc'] = ctx.group(ctx.mesh(g.sphere(6.0, 10, 8), GD));
         P[sd + 'ua'] = sidePart(z, gr => add(gr, loft('figLoUA', UA, 4, 33, 2), GS));
@@ -397,7 +405,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
         P[sd + 'sh'] = sidePart(z, gr => add(gr, loft('figLoSH', SHN, 0, 44, 3), GS), L.sh / 44);
         P[sd + 'kn'] = ctx.group(ctx.mesh(g.cyl(4.4, 4.4, 13, 8, 'z'), GS));
         P[sd + 'el'] = ctx.group(ctx.mesh(g.cyl(4.8, 4.8, 10.4, 8, 'z'), GS));
-        P[sd + 'fo'] = sidePart(z, gr => add(gr, loft('figLoFT', SOLE, -8.4, 18.9, 4, { capB: true, capT: true, axis: 'x', off: 0.6 }), NB));
+        P[sd + 'fo'] = sidePart(z, gr => add(gr, loft('figLoFT', FLO, -8.4, 18.9, 4, { capB: true, capT: true, axis: 'x' }), NB));
         P[sd + 'ha'] = RK.hand(ctx, { side: z, palm: [8.2, 3.2, 7.4], palmMat: BK, fingerMat: BK });
       }
       return { parts: P, shZ: 18, hpZ: 12.5 };
@@ -415,21 +423,21 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
       add(torso, g.ccyl(4.6, 36, 0.6, 24, 'z'), BK);                                    // barre transversale
       add(torso, fuse('figPvBolts', [[-2.8, 3.4], [2.8, 3.4], [-2.8, -0.6], [2.8, -0.6]].map(([z, y]) => [g.ccyl(0.4, 0.3, 0.1, 8, 'x'), [6.9, y, z]])), ST);
       for (const z of [1, -1]) {
-        add(torso, g.ccyl(5.7, 11.4, 1.0, 32, 'z'), GS, [0, 0, z * 12.5]);             // tambour
-        add(torso, g.ccyl(5.2, 1.2, 0.3, 28, 'z'), BK, [0, 0, z * 6.4]);                // bague intérieure
-        add(torso, g.cyl(5.74, 5.74, 0.3, 32, 'z', true), SE, [0, 0, z * 9.4]);         // joint
+        add(torso, g.ccyl(5.7, 11.4, 1.0, 28, 'z'), GS, [0, 0, z * 12.5]);             // tambour
+        add(torso, g.ccyl(5.2, 1.2, 0.3, 20, 'z'), BK, [0, 0, z * 6.4]);                // bague intérieure
+        add(torso, g.cyl(5.74, 5.74, 0.3, 28, 'z', true), SE, [0, 0, z * 9.4]);         // joint
       }
 
       // --- taille noire mécanique (colonne cannelée + biellettes) ---
       add(torso, g.ccyl(4.4, 11.4, 0.6, 24), BK, [0, 10.4, 0]);
-      add(torso, fuse('figWaistRings', [6.4, 8.4, 10.4, 12.4].map(y => [g.ccyl(5.1, 0.9, 0.3, 24), [0, y, 0]])), GD);
+      add(torso, fuse('figWaistRings', [6.4, 8.4, 10.4, 12.4].map(y => [g.ccyl(5.1, 0.9, 0.3, 18), [0, y, 0]])), GD);
       add(torso, g.cbox(15.4, 1.2, 17.4, 0.5), BK, [0, 15.1, 0]);                       // platine sous le buste
       {
         const links = [], balls = [];
         for (const z of [1, -1]) for (const x of [1, -1]) {
           const a = [x * 5.8, 14.6, z * 6.8], b = [x * 2.8, 6.0, z * 4.4];
           links.push(rodItem(a, b, 0.75));
-          balls.push([g.sphere(1.05, 8, 6), a], [g.sphere(1.0, 8, 6), b]);
+          balls.push([g.sphere(1.05, 6, 4), a], [g.sphere(1.0, 6, 4), b]);
           links.push(rodItem([x * 6.6, 14.4, z * 2.6], [x * 4.6, 6.2, z * 6.0], 0.55));
         }
         add(torso, fuse('figWaistLinks', links), BK);
@@ -437,21 +445,30 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
       }
 
       // --- buste ---
-      const d90 = a => Math.min(1, Math.abs(Math.abs(na(a)) - 90) / 27);
-      const ARM_LO = a => 43.0 + 8.0 * d90(a) * d90(a);       // bas de l'emmanchure (haut du panneau latéral)
-      const ARM_HI = a => 57.4 - 5.2 * d90(a) * d90(a);       // haut de l'emmanchure (bas de la bretelle)
-      const TOMB = a => 43.4 - 10 * Math.pow(clamp((Math.abs(na(a)) - 20) / 36, 0, 1), 2);
+      // emmanchure : rectangle arrondi (superellipse) qui déborde sur les coins avant/arrière,
+      // visible de face entre le plastron et la rotule d'épaule (look « gilet »)
+      const hole = a => { const d = Math.min(1, Math.abs(Math.abs(na(a)) - 90) / 49); return Math.pow(Math.max(0, 1 - Math.pow(d, 4)), 0.25); };
+      const ARM_LO = a => 50.0 - 7.6 * hole(a);       // bas de l'emmanchure (haut du panneau latéral)
+      const ARM_HI = a => 50.4 + 7.0 * hole(a);       // haut de l'emmanchure (bas de la bretelle)
+      const TOMB = a => 43.4 - 9 * Math.pow(clamp((Math.abs(na(a)) - 13) / 24, 0, 1), 2);
       add(torso, loft('figCHcore', CH, 15.2, 61.6, 7, { off: -0.9, capB: true, capT: true }), SE);
-      add(torso, patch('figFront', { tab: CH, a0: -62, a1: 62, y0: 15.2, y1: 60.9, nv: 14, c: 0.5, t: 1.4 }), GS);
-      add(torso, patch('figTomb', { tab: CH, a0: -56, a1: 56, y0: 16.6, y1: TOMB, nv: 8, off: 0.22, c: 0.3, t: 0.7 }), GS2);
+      add(torso, patch('figFront', { tab: CH, a0: -40, a1: 40, y0: 15.2, y1: 60.9, nv: 11, c: 0.5, t: 1.4 }), GS);
+      add(torso, patch('figTomb', { tab: CH, a0: -37, a1: 37, y0: 16.6, y1: TOMB, nv: 8, off: 0.22, c: 0.3, t: 0.7 }), GS2);
       for (const s of [1, -1]) {
-        const A0 = s > 0 ? 63 : -117, A1 = s > 0 ? 117 : -63;
-        add(torso, patch('figSide' + s, { tab: CH, a0: A0, a1: A1, y0: 15.2, y1: ARM_LO, nv: 10, c: 0.5, t: 1.4 }), GS);
-        add(torso, patch('figStrap' + s, { tab: CH, a0: A0, a1: A1, y0: ARM_HI, y1: 60.9, nv: 4, c: 0.5, t: 1.4 }), GS);
+        const A0 = s > 0 ? 42 : -138, A1 = s > 0 ? 138 : -42;
+        add(torso, patch('figSide' + s, { tab: CH, a0: A0, a1: A1, y0: 15.2, y1: ARM_LO, nv: 9, c: 0.5, t: 1.4 }), GS);
+        add(torso, patch('figStrap' + s, { tab: CH, a0: A0, a1: A1, y0: ARM_HI, y1: 60.9, nv: 3, c: 0.5, t: 1.4 }), GS);
         add(torso, patch('figSock' + s, { tab: CH, a0: A0 + 2, a1: A1 - 2, y0: 42.0, y1: 58.2, nv: 5, off: -0.55, c: 0.3, t: 0.5 }), BK);
+        // bourrelet de l'emmanchure (arête claire qui accroche les néons)
+        const rim = [];
+        for (let i = 0; i <= 20; i++) { const a = A0 + 1.2 + (A1 - A0 - 2.4) * i / 20; rim.push(SP(CH, a, ARM_LO(a) - 0.3, 0.05)); }
+        for (let i = 20; i >= 0; i--) { const a = A0 + 1.2 + (A1 - A0 - 2.4) * i / 20; rim.push(SP(CH, a, ARM_HI(a) + 0.3, 0.05)); }
+        rim.push(rim[0]);
+        add(torso, g.tube(rim, 0.4, 56, 6), GB);
       }
-      add(torso, patch('figBackUp', { tab: CH, a0: 118, a1: 242, y0: 31.0, y1: 60.9, nv: 10, c: 0.5, t: 1.4 }), GS);
-      add(torso, patch('figBackLo', { tab: CH, a0: 118, a1: 242, y0: 15.2, y1: 30.4, nv: 6, c: 0.5, t: 1.4 }), GS);
+      add(torso, patch('figBackPan', { tab: CH, a0: 146, a1: 214, y0: 35.0, y1: a => 54.0 - 2.4 * Math.pow((180 - Math.abs(na(a))) / 34, 2), nv: 5, off: 0.16, c: 0.22, t: 0.5 }), GS);
+      add(torso, patch('figBackUp', { tab: CH, a0: 140, a1: 220, y0: 31.0, y1: 60.9, nv: 8, c: 0.5, t: 1.4 }), GS);
+      add(torso, patch('figBackLo', { tab: CH, a0: 140, a1: 220, y0: 15.2, y1: 30.4, nv: 6, c: 0.5, t: 1.4 }), GS);
       add(torso, patch('figBackVent', { tab: CH, a0: 158, a1: 202, y0: 19.5, y1: 27.5, nv: 3, off: -0.2, c: 0.2, t: 0.5 }), SE);
       {
         const slots = [];
@@ -462,7 +479,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
       // vis du plastron / du dos
       const screws = [];
       for (const s of [1, -1]) {
-        for (const [a, y] of [[50, 33.5], [52, 22.5], [50, 17.6], [150, 52], [150, 34], [150, 19]]) screws.push([g.ccyl(0.36, 0.3, 0.1, 8), null, nMat(CH, s * a, y, 0.05)]);
+        for (const [a, y] of [[36, 33.5], [36, 22.5], [36, 17.8], [150, 52], [150, 34], [150, 19], [90, 24], [90, 36]]) screws.push([screw(0.36), null, nMat(CH, s * a, y, 0.05)]);
       }
       add(torso, fuse('figScrews', screws), SE);
       // voyants d'état (col + bas du buste)
@@ -502,20 +519,22 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
        ===================================================== */
     {
       const h = ctx.group(); h.position.y = -1.0;   // tête un peu basse : cou court
-      const SEAM = a => -1.2 + 2.2 * Math.cos(a * D);
-      add(h, loft('figHDcore', HEAD, -11.6, 11.4, 7, { off: -0.5, capB: true, capT: true }), SE);
-      add(h, patch('figHDtop', { tab: HEAD, closed: true, y0: SEAM, y1: 11.4, nv: 11, c: 0.3, t: 0.8, capT: true, vmap: v => Math.sin(v * PI / 2) }), NB);
-      add(h, patch('figHDlow', { tab: HEAD, closed: true, y0: -11.6, y1: a => SEAM(a) - 0.45, nv: 6, c: 0.3, t: 0.8, capB: true }), NB);
+      // coque d'un seul tenant (œuf lisse) + plaque de nuque
+      add(h, patch('figHDshell', { tab: HEAD, closed: true, y0: -11.6, y1: 11.4, nv: 18, c: 0, t: 0, capT: true, capB: true, vmap: v => (1 - Math.cos(v * PI)) / 2 }), NB);
+      add(h, patch('figHDnape', { tab: HEAD, a0: 128, a1: 232, y0: -9.6, y1: a => -3.2 + 1.2 * Math.cos((180 - Math.abs(na(a))) / 52 * PI / 2), nv: 4, off: 0.18, c: 0.22, t: 0.6 }), NB);
       const FW = a => Math.abs(na(a)) / 50;
-      add(h, patch('figHDface', { tab: HEAD, a0: -50, a1: 50, y0: a => -10.6 + 5.6 * Math.pow(FW(a), 2.2), y1: a => 10.1 - 4.2 * Math.pow(FW(a), 2.4), nv: 16, off: 0.2, c: 0.22, t: 0.8 }), VI);
+      add(h, patch('figHDface', { tab: HEAD, a0: -50, a1: 50, y0: a => -10.6 + 5.6 * Math.pow(FW(a), 2.2), y1: a => 10.1 - 4.2 * Math.pow(FW(a), 2.4), nv: 13, off: 0.2, c: 0.22, t: 0.8 }), VI);
       // caméras (front / menton) : bague métal + verre
       const cams = [], glass = [];
-      for (const y of [6.1, -7.4]) {
-        cams.push([g.lathe([[1.2, 0.62], [1.7, 0.56], [1.95, 0.25], [1.95, -0.3]], 20), null, nMat(HEAD, 0, y, 0.42)]);
-        glass.push([g.lathe([[0, 0.42], [0.55, 0.38], [0.95, 0.24], [1.18, 0.05]], 16), null, nMat(HEAD, 0, y, 0.62)]);
+      const iris = [];
+      for (const y of [6.1, -7.2]) {
+        cams.push([g.lathe([[1.3, 0.6], [1.75, 0.55], [2.0, 0.25], [2.0, -0.3]], 20), null, nMat(HEAD, 0, y, 0.42)]);
+        glass.push([g.lathe([[0, 0.5], [0.55, 0.46], [1.0, 0.3], [1.32, 0.05]], 16), null, nMat(HEAD, 0, y, 0.6)]);
+        iris.push([g.torus(0.62, 0.09, 16, 4, PI * 2, 'y'), null, nMat(HEAD, 0, y, 1.0)]);
       }
       add(h, fuse('figCamRings', cams), BZ);
       add(h, fuse('figCamGlass', glass), LENS);
+      add(h, fuse('figCamIris', iris), GD);
       // logo lumineux + 3 points (groupe miroir)
       const mg = markGroup(h);
       ctx.add(mg, fuse('figFaceLogo', [
@@ -532,12 +551,12 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
     for (const [sd, z] of [['f', 1], ['b', -1]]) {
       // rotule d'épaule sphérique (suit le torse) + actionneur intérieur dans l'emmanchure
       P[sd + 'sc'] = sidePart(z, gr => {
-        add(gr, g.ccyl(4.6, 4.6, 0.7, 20, 'z'), BK, [0, -0.6, -6.4]);
-        add(gr, fuse('figShRibs', [-7.6, -5.8].map(zz => [g.ccyl(4.9, 0.6, 0.15, 20, 'z'), [0, -0.6, zz]])), GD);
-        add(gr, g.lathe([[0, -4.4], [3.4, -4.4], [4.7, -3.8], [5.55, -2.5], [5.95, -0.9], [6.0, 0.6], [5.75, 2.2], [5.2, 3.5], [4.5, 4.4], [4.1, 4.8], [0, 4.8]], 28, 'z'), GB);
-        add(gr, g.cyl(6.03, 6.03, 0.28, 28, 'z', true), SE, [0, 0, -1.3]);
-        add(gr, g.ccyl(3.6, 0.6, 0.2, 24, 'z'), GS, [0, 0, 4.85]);
-        add(gr, g.ccyl(1.4, 0.5, 0.15, 14, 'z'), GD, [0, 0, 5.2]);
+        add(gr, g.ccyl(4.6, 4.6, 0.7, 16, 'z'), BK, [0, -0.6, -6.4]);
+        add(gr, fuse('figShRibs', [-7.6, -5.8].map(zz => [g.ccyl(4.9, 0.6, 0.15, 16, 'z'), [0, -0.6, zz]])), GD);
+        add(gr, g.lathe([[0, -4.8], [3.2, -4.8], [4.7, -4.1], [5.7, -2.9], [6.15, -1.3], [6.25, 0.3], [6.05, 2.1], [5.45, 3.7], [4.45, 4.95], [3.1, 5.65], [0, 5.8]], 28, 'z'), GB, [0, 0, -0.6]);
+        add(gr, g.cyl(6.2, 6.2, 0.28, 28, 'z', true), SE, [0, 0, -1.6]);
+        add(gr, g.ccyl(2.9, 0.5, 0.15, 24, 'z'), GS, [0, 0, 5.05]);
+        add(gr, g.ccyl(1.3, 0.5, 0.15, 14, 'z'), GD, [0, 0, 5.35]);
       });
       // bras : col sombre, coque grise, bande texte, grille noire, chape du coude
       P[sd + 'ua'] = sidePart(z, gr => {
@@ -546,10 +565,10 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
         add(gr, patch('figUAsh', { tab: UA, closed: true, y0: 7.0, y1: 19.4, nv: 6, c: 0.45, t: 1.2 }), GS);
         add(gr, patch('figUApan', { tab: UA, a0: 62, a1: 118, y0: 9.4, y1: 17.2, nv: 3, off: 0.18, c: 0.25, t: 0.6 }), GS2);
         add(gr, patch('figUAband', { tab: UA, closed: true, y0: 19.8, y1: 20.8, nv: 1, off: -0.1, c: 0.15, t: 0.4 }), BK);
-        add(gr, g.cyl(4.95, 4.95, 7.0, 32, 'y', true), MESH, [0, 24.5, 0]);
-        add(gr, fuse('figUArings', [[g.ccyl(5.15, 0.5, 0.15, 20), [0, 21.0, 0]], [g.ccyl(5.1, 0.5, 0.15, 20), [0, 28.0, 0]]]), GD);
+        add(gr, g.cyl(4.62, 4.62, 7.0, 32, 'y', true), MESH, [0, 24.5, 0]);
+        add(gr, fuse('figUArings', [[g.ccyl(4.85, 0.5, 0.15, 20), [0, 21.0, 0]], [g.ccyl(4.8, 0.5, 0.15, 20), [0, 28.0, 0]]]), GD);
         add(gr, patch('figUAlow', { tab: UA, a0: -60, a1: 60, y0: 28.4, y1: 33.6, nv: 2, c: 0.4, t: 1.0 }), GS);
-        for (const zz of [1, -1]) add(gr, g.prism([[-3.4, 28.2], [3.6, 28.2], [3.9, 31.5], [2.4, 35.2], [-2.4, 35.2], [-3.9, 31.5]], 1.4, 0.4), GS, [0, 0, zz * 4.6]);
+        for (const zz of [1, -1]) add(gr, g.prism([[-3.4, 28.2], [3.6, 28.2], [3.9, 31.5], [2.4, 35.2], [-2.4, 35.2], [-3.9, 31.5]], 1.4, 0.4), GS, [0, 0, zz * 4.35]);
       });
       // coude : moyeu gris + flasques claires + couvre-olécrane
       P[sd + 'el'] = sidePart(z, gr => {
@@ -567,7 +586,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
         add(gr, patch('figFAbot', { tab: FA, a0: 94, a1: 266, y0: 3.4, y1: 24.6, nv: 7, c: 0.45, t: 1.2 }), GS);
         add(gr, patch('figFAcuff', { tab: FA, closed: true, y0: 25.3, y1: 28.6, nv: 2, c: 0.35, t: 0.9 }), GS);
         add(gr, patch('figFAwr', { tab: FA, closed: true, y0: 29.0, y1: 31.4, nv: 1, off: -0.35, c: 0.2, t: 0.5 }), BK);
-        add(gr, fuse('figFAscrews', [[0, 6], [0, 22], [180, 6], [180, 22]].map(([a, y]) => [g.ccyl(0.3, 0.25, 0.08, 8), null, nMat(FA, a, y, 0.05)])), SE);
+        add(gr, fuse('figFAscrews', [[0, 6], [0, 22], [180, 6], [180, 22]].map(([a, y]) => [screw(0.3), null, nMat(FA, a, y, 0.05)])), SE);
       });
       P[sd + 'ha'] = figHand(z);
     }
@@ -596,8 +615,8 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
         add(gr, fin(6.3, 8.0, 30, 0.6), BK, [0, 9.4, 0], [PI / 2, 0, 0]);
         add(gr, patch('figTHcuff', { tab: TH, closed: true, y0: 13.6, y1: 23.2, nv: 5, off: 0.45, c: 0.5, t: 1.4 }), GS);
         add(gr, patch('figTHlow', { tab: TH, closed: true, y0: 23.6, y1: 37.6, nv: 6, c: 0.45, t: 1.2 }), GS);
-        add(gr, patch('figTHarch', { tab: TH, a0: 140, a1: 220, y0: a => 30.2 + 3.6 * Math.pow((180 - Math.abs(na(a))) / 40, 2), y1: 37.2, nv: 3, off: 0.16, c: 0.22, t: 0.5 }), GS2);
-        add(gr, fuse('figTHscrews', [[160, 35.6], [200, 35.6], [90, 26], [90, 34]].map(([a, y]) => [g.ccyl(0.32, 0.25, 0.08, 8), null, nMat(TH, a, y, 0.05)])), SE);
+        add(gr, patch('figTHarch', { tab: TH, a0: 138, a1: 222, y0: a => 30.4 + 4.2 * Math.pow((180 - Math.abs(na(a))) / 42, 1.6), y1: 37.2, nv: 3, off: 0.12, c: 0.18, t: 0.45 }), GS);
+        add(gr, fuse('figTHscrews', [[160, 35.6], [200, 35.6], [90, 26], [90, 34]].map(([a, y]) => [screw(0.32), null, nMat(TH, a, y, 0.05)])), SE);
       }, L.th / 44);
       // genou : axe noir, disques gris latéraux, rotule grise
       P[sd + 'kn'] = sidePart(z, gr => {
@@ -611,25 +630,31 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
       });
       // tibia : long, effilé, ouvert en arche sur la cheville noire
       P[sd + 'sh'] = sidePart(z, gr => {
-        const ARCH = a => 39.6 - 6.0 * Math.max(0, 1 - Math.pow((180 - Math.abs(na(a))) / 46, 2));
+        const ARCH = a => { const u = Math.min(1, (180 - Math.abs(na(a))) / 60); return 39.6 - 6.6 * Math.sqrt(Math.max(0, 1 - u * u)); };
         add(gr, loft('figSHcore', SHN, -2, 45, 5, { off: -0.8 }), BK);
-        add(gr, patch('figSHfr', { tab: SHN, a0: 93, a1: 267, y0: 2.6, y1: ARCH, nv: 10, c: 0.5, t: 1.3 }), GS);
-        add(gr, patch('figSHbk', { tab: SHN, a0: -87, a1: 87, y0: 2.6, y1: 39.6, nv: 10, c: 0.5, t: 1.3 }), GS);
-        add(gr, patch('figSHpan', { tab: SHN, a0: 146, a1: 214, y0: 5.0, y1: a => 17.5 - 3.0 * Math.pow((180 - Math.abs(na(a))) / 34, 2), nv: 3, off: 0.15, c: 0.22, t: 0.5 }), GS2);
-        add(gr, fuse('figSHscrews', [[156, 21.5], [204, 21.5], [90, 8], [90, 30], [-90, 8], [-90, 30]].map(([a, y]) => [g.ccyl(0.3, 0.25, 0.08, 8), null, nMat(SHN, a, y, 0.05)])), SE);
+        add(gr, patch('figSHfr', { tab: SHN, a0: 93, a1: 267, y0: 2.6, y1: ARCH, nv: 8, c: 0.5, t: 1.3 }), GS);
+        add(gr, patch('figSHbk', { tab: SHN, a0: -87, a1: 87, y0: 2.6, y1: 39.6, nv: 8, c: 0.5, t: 1.3 }), GS);
+        add(gr, patch('figSHpan', { tab: SHN, a0: 144, a1: 216, y0: 5.0, y1: a => 17.0 - 1.6 * Math.pow((180 - Math.abs(na(a))) / 36, 4), nv: 3, off: 0.12, c: 0.18, t: 0.45 }), GS);
+        add(gr, fuse('figSHscrews', [[156, 21.5], [204, 21.5], [90, 8], [90, 30], [-90, 8], [-90, 30]].map(([a, y]) => [screw(0.3), null, nMat(SHN, a, y, 0.05)])), SE);
         // cheville noire : vérins d'Achille + bloc
         for (const zz of [1, -1]) {
           rod(gr, [4.8, 24, zz * 1.9], [3.6, 41.5, zz * 1.7], 0.55, ST, 8);
           add(gr, g.ccyl(1.0, 2.2, 0.3, 12), BK, [4.8, 24.4, zz * 1.9]);
         }
-        add(gr, g.cbox(6.6, 4.4, 7.4, 1.2), BK, [-0.4, 40.6, 0]);
+        add(gr, g.ccyl(3.4, 6.8, 0.8, 16, 'z'), BK, [-0.2, 40.4, 0]);
+        add(gr, fuse('figAnkLinks', [1, -1].flatMap(zz => [rodItem([-2.6, 34.5, zz * 2.2], [-2.2, 42.2, zz * 2.6], 0.42, 6), [g.sphere(0.7, 6, 4), [-2.6, 34.5, zz * 2.2]]])), ST);
       }, L.sh / 44);
       // pied : basket noire (tige laquée, semelle épaisse, embout, contrefort, logo)
       P[sd + 'fo'] = sidePart(z, gr => {
-        add(gr, loft('figSOLE', SOLE, -8.4, 18.9, 8, { capB: true, capT: true, axis: 'x' }), RU);
-        add(gr, loft('figFTup', FT, -8.0, 18.4, 11, { capB: true, capT: true, axis: 'x' }), NB);
-        add(gr, patch('figFTtoe', { tab: FT, a0: 100, a1: 260, y0: 11.0, y1: 18.4, nv: 4, off: 0.22, c: 0.25, t: 0.7, axis: 'x' }), BK);
-        add(gr, patch('figFTheel', { tab: FT, a0: 60, a1: 300, y0: -8.0, y1: -4.6, nv: 3, off: 0.2, c: 0.25, t: 0.7, axis: 'x' }), BK);
+        add(gr, loft('figSOLE', SOLE, -8.5, 19.0, 8, { capB: true, capT: true, axis: 'x' }), RU);
+        add(gr, loft('figFTup', FT, -8.2, 18.7, 11, { capB: true, capT: true, axis: 'x' }), NB);
+        add(gr, patch('figFTtoe', { tab: FT, a0: 96, a1: 264, y0: 11.6, y1: 18.7, nv: 4, off: 0.2, c: 0.25, t: 0.7, axis: 'x' }), NB);
+        add(gr, patch('figFTheel', { tab: FT, a0: 64, a1: 296, y0: -8.2, y1: -4.4, nv: 3, off: 0.2, c: 0.25, t: 0.7, axis: 'x' }), NB);
+        add(gr, g.cbox(1.2, 2.6, 2.4, 0.4), BK, [-8.5, 1.2, 0]);                             // languette arrière
+        add(gr, g.shape('figureMidsole', sh => {
+          const R = [[-8.4, 3.6], [-7.6, 5.0], [-4.5, 5.45], [0, 5.55], [3.5, 5.65], [7.5, 5.75], [11.5, 5.65], [15, 5.2], [17.6, 4.05], [18.9, 2.1]];
+          R.forEach(([x, w], i) => i ? sh.lineTo(x, w) : sh.moveTo(x, w)); for (let i = R.length - 1; i >= 0; i--) sh.lineTo(R[i][0], -R[i][1]);
+        }, 0.4, 0.1, 1), GD, [0, -4.45, 0], [PI / 2, 0, 0]);
         add(gr, patch('figFTtongue', { tab: FT, a0: 148, a1: 212, y0: 0.5, y1: 8.5, nv: 4, off: 0.2, c: 0.25, t: 0.6, axis: 'x' }), BK);
         add(gr, g.ccyl(3.0, 9.0, 0.5, 20, 'z'), BK);
         for (const zz of [1, -1]) add(gr, g.ccyl(2.2, 0.6, 0.2, 18, 'z'), GD, [0, 0, zz * 4.7]);
@@ -647,39 +672,38 @@ if (typeof RK !== 'undefined' && RK) RK.models.figure = (function () {
       const root = ctx.group(), inner = ctx.group();
       if (side < 0) inner.scale.z = -1;
       root.add(inner);
-      const PL = 8.2, PT = 3.2, FW = 1.6, FL = [3.8, 2.8, 2.3], FTH = [2.2, 2.0, 1.8];
-      add(inner, g.ccyl(2.8, 2.6, 0.5, 18, 'x'), BK, [1.1, 0, 0]);
-      add(inner, g.ccyl(3.1, 0.6, 0.2, 18, 'x'), GD, [2.2, 0, 0]);
-      const palm = g.shape('figurePalm', s => {
-        s.moveTo(2.3, -3.1); s.lineTo(2.3 + PL - 0.9, -3.8); s.lineTo(2.3 + PL, -3.3); s.lineTo(2.3 + PL, 3.3); s.lineTo(2.3 + PL - 0.9, 3.8); s.lineTo(2.3, 3.1); s.lineTo(2.3, -3.1);
-      }, PT, 0.5, 1);
-      add(inner, palm, BK, [0, 0, 0], [PI / 2, 0, 0]);
-      add(inner, palm, HB, [0.4, 1.15, 0], [PI / 2, 0, 0], [0.9, 0.86, 0.4]);
-      add(inner, g.cbox(PL - 2.4, 0.5, 2.2, 0.2), GD, [3.6 + (PL - 2.4) / 2, 1.75, 0]);
-      add(inner, g.cbox(PL - 2.0, 0.6, 6.2, 0.25), RU, [3.4 + (PL - 2.0) / 2, -1.6, 0]);
-      add(inner, fuse('figKnuck', [0, 1, 2, 3].map(i => [g.ccyl(1.0, 1.3, 0.25, 12, 'z'), [2.3 + PL, 0.2, ((i + 0.5) / 4 - 0.5) * 6.8]])), GD);
+      const PL = 8.0, PT = 3.2, PW = 7.2, FW = 1.55, FL = [3.8, 2.7, 2.2], FTH = [2.1, 1.9, 1.7], X0 = 2.4;
+      const zf = i => ((i + 0.5) / 4 - 0.5) * 6.6;
+      // poignet
+      add(inner, g.ccyl(2.7, 2.6, 0.5, 16, 'x'), BK, [1.1, 0, 0]);
+      add(inner, g.ccyl(3.0, 0.6, 0.2, 16, 'x'), GD, [2.2, 0, 0]);
+      // paume arrondie, capot dorsal bombé, coussinet
+      add(inner, g.rbox(PL, PT, PW, 1.1, 1), HB, [X0 + PL / 2, -0.1, 0]);
+      add(inner, g.rbox(PL - 1.6, 1.0, PW - 1.2, 0.45, 2), HP, [X0 + PL / 2 + 0.1, PT / 2 + 0.1, 0]);
+      add(inner, g.cbox(PL - 3.0, 0.3, 0.5, 0.1), SE, [X0 + PL / 2 + 0.1, PT / 2 + 0.6, 0]);
+      add(inner, g.rbox(PL - 2.2, 0.7, PW - 1.4, 0.3, 1), RU, [X0 + PL / 2 + 0.3, -PT / 2 - 0.12, 0]);
+      add(inner, fuse('figKnuck', [0, 1, 2, 3].map(i => [g.cyl(1.0, 1.0, 1.45, 10, 'z'), [X0 + PL - 0.3, 0.2, zf(i)]])), GD);
+      // phalange : prisme octogonal chanfreiné (section t × w), embout arrondi pour la dernière
       const phal = (Lx, t, w, tip) => fuse(`figPhal${Lx},${t},${w},${tip}`, [
-        [g.cbox(Lx, t, w, 0.35), [Lx / 2, 0, 0]],
-        [g.cyl(t * 0.5, t * 0.5, w * 0.92, 8, 'z'), [0, 0, 0]],
-        ...(tip ? [[g.cyl(t * 0.48, t * 0.48, w * 0.9, 8, 'z'), [Lx - 0.1, -0.05, 0]]] : [])
+        [tip ? g.lathe([[0, -0.5], [0.4, -0.5], [0.5, -0.38], [0.5, 0.18], [0.42, 0.38], [0.24, 0.5], [0, 0.53]], 8, 'x') : g.ccyl(0.5, 1, 0.12, 8, 'x'), [Lx / 2, 0, 0], [PI / 8, 0, 0], [Lx - 0.3, t, w]]
       ]);
-      const joint = (t, w) => fuse(`figPJ${t},${w}`, [[g.cyl(t * 0.42, t * 0.42, w * 1.04, 8, 'z'), [0, 0, 0]]]);
+      const joint = (t, w) => fuse(`figPJ${t},${w}`, [[g.cyl(t * 0.44, t * 0.44, w * 1.08, 7, 'z'), [0, 0, 0]]]);
       const fingers = [];
       for (let i = 0; i < 4; i++) {
-        const zz = ((i + 0.5) / 4 - 0.5) * 6.8, k = [0.92, 1, 0.97, 0.84][i];
+        const zz = zf(i), k = [0.92, 1, 0.97, 0.84][i];
         let parent = inner; const segs = [];
         for (let j = 0; j < 3; j++) {
           const piv = ctx.group(); piv.userData.noMerge = true;
-          if (j === 0) piv.position.set(2.3 + PL + 0.6, 0.1, zz); else piv.position.set(FL[j - 1] * k, 0, 0);
+          if (j === 0) piv.position.set(X0 + PL + 0.5, 0.15, zz); else piv.position.set(FL[j - 1] * k, 0, 0);
           add(piv, phal(+(FL[j] * k).toFixed(2), FTH[j], FW, j === 2), j === 1 ? BK : HB);
-          if (j > 0) add(piv, joint(FTH[j], FW), GD);
+          add(piv, joint(FTH[j], FW), GD);
           parent.add(piv); parent = piv; segs.push(piv);
         }
         fingers.push(segs);
       }
       // pouce (côté -Z pour la main 'f')
       const t0 = ctx.group(); t0.position.set(3.6, -0.6, -3.3); t0.userData.noMerge = true;
-      add(t0, phal(3.8, 2.4, 2.0, false), HB);
+      add(t0, phal(3.8, 2.4, 2.0, false), HB); add(t0, joint(2.4, 2.0), GD);
       const t1 = ctx.group(); t1.position.set(3.8, 0, 0); t0.add(t1);
       add(t1, phal(2.9, 2.1, 1.8, false), BK); add(t1, joint(2.1, 1.8), GD);
       const t2 = ctx.group(); t2.position.set(2.9, 0, 0); t1.add(t2);

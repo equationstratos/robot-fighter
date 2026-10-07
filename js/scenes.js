@@ -738,6 +738,7 @@ function sayName(ch) { AU.say(ch.name.replace('02', 'zero two').replace('H1', 'H
 const DEMOS = ch => (ch.id === 'atlas' ? ['contort'] : []).concat(['combo', 'special', ch.move === 'uppercut' ? 'uppercut' : ch.move, 'kick', 'backkick', 'taunt']);
 
 /* =================== SÉLECTION =================== */
+const SEL_COLS = 5;
 class SelectScene {
   constructor(mode) {
     this.mode = mode; this.t = 0; this.cur = [0, 1]; this.done = [false, mode === 'arcade'];
@@ -755,7 +756,7 @@ class SelectScene {
     if (kind === 'burst') { this.shake = 12; this.flash = 8; }
   }
   demo(p) { const ch = ROSTER[this.cur[p]], list = DEMOS(ch); this.pup[p].play(list[this.demoI[p]++ % list.length], this.done[p] ? 'taunt' : null); }
-  tile(i) { const col = i % 4, row = (i / 4) | 0; return { x: W / 2 - 2 * 92 + col * 92, y: 318 + row * 92, s: 84 }; }
+  tile(i) { const C = SEL_COLS, n = ROSTER.length, row = (i / C) | 0, inRow = Math.min(C, n - row * C), col = i % C; return { x: W / 2 + (col - (inRow - 1) / 2) * 82, y: 322 + row * 84, s: 76 }; }
   update() {
     this.t++; this.anim++;
     FX.update(); this.pup.forEach(pp => pp.update());
@@ -773,13 +774,14 @@ class SelectScene {
       if (this.done[p]) continue;
       const pd = pads[p];
       let c = this.cur[p];
-      if (pd.pressed.l) c = (c % 4 === 0) ? c + 3 : c - 1;
-      if (pd.pressed.r) c = (c % 4 === 3) ? c - 3 : c + 1;
-      if (pd.pressed.u || pd.pressed.d) c = (c + 4) % 8;
+      const N = ROSTER.length, C = SEL_COLS, row = (c / C) | 0, rowStart = row * C, rowLen = Math.min(C, N - rowStart);
+      if (pd.pressed.l) c = rowStart + ((c - rowStart - 1 + rowLen) % rowLen);
+      if (pd.pressed.r) c = rowStart + ((c - rowStart + 1) % rowLen);
+      if (pd.pressed.u || pd.pressed.d) { const col = c - rowStart, nr = (row + 1) % Math.ceil(N / C), nrLen = Math.min(C, N - nr * C); c = nr * C + Math.min(col, nrLen - 1); }
       if (c !== this.cur[p]) { this.cur[p] = c; AU.sfx('move'); this.pup[p].play('enter'); this.demoI[p] = 0; }
       if (confirmPressed(pd)) this.pickChar(p);
     }
-    for (const t of taps) for (let i = 0; i < 8; i++) {
+    for (const t of taps) for (let i = 0; i < ROSTER.length; i++) {
       const r = this.tile(i);
       if (inRect(t, r.x - r.s / 2, r.y - r.s / 2, r.s, r.s)) {
         const p = this.done[0] ? 1 : 0; if (this.done[p]) break;
@@ -845,7 +847,7 @@ class SelectScene {
       moveRows(ch).forEach((r, j) => { txt(r[0], W - 284, 186 + j * 30, 8, { align: 'left', color: '#ffd23a' }); txt(r[1], W - 284, 200 + j * 30, 10, { align: 'left', color: '#fff', font: FONT_BIG }); });
     }
     // grille
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < ROSTER.length; i++) {
       const r = this.tile(i), ch = ROSTER[i];
       c.drawImage(portrait(ch, 84), r.x - r.s / 2, r.y - r.s / 2, r.s, r.s);
       c.strokeStyle = '#333'; c.lineWidth = 2; c.strokeRect(r.x - r.s / 2, r.y - r.s / 2, r.s, r.s);

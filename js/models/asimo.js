@@ -296,20 +296,38 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
     { y: 37.5, xf: 7, xb: 6.9, z: 6.9 }
   ], 3);
   // ---- pied (axe X : talon -X → pointe +X ; cheville = origine ; sol à y = -7.2)
+  // tige blanche bombée (haute à la cheville), semelle grise épaisse débordante, bande de roulement noire
   const FOOT = tab('x', [
-    { x: -9.6, yt: 2.0, yb: 1.6, z: 5.4, y0: -2.8 },
-    { x: -8.2, yt: 3.6, yb: 2.0, z: 6.6, y0: -2.2 },
-    { x: -3, yt: 5.2, yb: 2.0, z: 7.0, y0: -2.0 },
-    { x: 4, yt: 4.4, yb: 2.0, z: 7.1, y0: -2.3 },
-    { x: 10, yt: 3.0, yb: 2.0, z: 7.1, y0: -2.6 },
-    { x: 13.6, yt: 2.6, yb: 2.0, z: 7.0, y0: -2.8 }
+    { x: -10.2, yt: 2.0, yb: 2.0, z: 5.6, y0: -3.0 },
+    { x: -8.6, yt: 3.0, yb: 3.0, z: 6.8, y0: -2.0 },
+    { x: -4, yt: 4.2, yb: 4.2, z: 7.2, y0: -0.8 },
+    { x: 1, yt: 4.0, yb: 4.0, z: 7.3, y0: -1.0 },
+    { x: 6, yt: 3.1, yb: 3.1, z: 7.3, y0: -1.9 },
+    { x: 11, yt: 2.3, yb: 2.3, z: 7.2, y0: -2.7 },
+    { x: 13.6, yt: 2.05, yb: 2.05, z: 7.1, y0: -2.95 }
   ], 3.6);
   const TOE = tab('x', [
-    { x: 14.2, yt: 2.3, yb: 2.0, z: 6.8, y0: -2.9 },
-    { x: 18.5, yt: 1.9, yb: 1.9, z: 6.3, y0: -3.1 },
-    { x: 21, yt: 1.5, yb: 1.7, z: 5.2, y0: -3.3 },
-    { x: 22.2, yt: 1.0, yb: 1.2, z: 3.6, y0: -3.6 }
+    { x: 14.2, yt: 1.95, yb: 1.95, z: 7.0, y0: -3.0 },
+    { x: 18.4, yt: 1.7, yb: 1.7, z: 6.6, y0: -3.2 },
+    { x: 21, yt: 1.4, yb: 1.4, z: 5.4, y0: -3.5 },
+    { x: 22.3, yt: 0.9, yb: 0.9, z: 3.6, y0: -3.9 }
   ], 3.6);
+  const SOLE = tab('x', [
+    { x: -10.6, y: 1.0, z: 5.8, y0: -5.9 },
+    { x: -9.2, y: 1.0, z: 7.2, y0: -5.9 },
+    { x: 13, y: 1.0, z: 7.6, y0: -5.9 },
+    { x: 18.5, y: 1.0, z: 7.0, y0: -5.85 },
+    { x: 21.6, y: 0.95, z: 5.5, y0: -5.7 },
+    { x: 22.9, y: 0.85, z: 3.6, y0: -5.55 }
+  ], 5);
+  const TREAD = tab('x', [
+    { x: -10.2, y: 0.26, z: 5.4, y0: -6.95 },
+    { x: -8.8, y: 0.26, z: 6.8, y0: -6.95 },
+    { x: 13, y: 0.26, z: 7.2, y0: -6.95 },
+    { x: 18.5, y: 0.26, z: 6.6, y0: -6.85 },
+    { x: 21.3, y: 0.24, z: 5.1, y0: -6.65 },
+    { x: 22.4, y: 0.22, z: 3.3, y0: -6.45 }
+  ], 5);
   // ---- main : corps de la main (axe X : poignet → jointures ; dos = +Y, paume = -Y)
   const HANDB = tab('x', [
     { x: 2.3, yt: 1.45, yb: 1.25, z: 3.15, y0: 0.15 },
@@ -317,22 +335,6 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
     { x: 8.0, yt: 1.95, yb: 1.6, z: 3.95, y0: 0.15 },
     { x: 9.7, yt: 1.45, yb: 1.35, z: 3.9, y0: 0.0 }
   ], 3.2);
-  const SOLE = tab('x', [
-    { x: -9.9, y: 0.8, z: 5.6, y0: -6.4 },
-    { x: -8.6, y: 0.8, z: 6.9, y0: -6.4 },
-    { x: 13, y: 0.8, z: 7.3, y0: -6.4 },
-    { x: 18.5, y: 0.8, z: 6.8, y0: -6.1 },
-    { x: 21.6, y: 0.8, z: 5.3, y0: -5.6 },
-    { x: 22.8, y: 0.7, z: 3.4, y0: -5.2 }
-  ], 6);
-  const MID = tab('x', [
-    { x: -9.6, y: 0.7, z: 5.4, y0: -4.9 },
-    { x: -8.4, y: 0.7, z: 6.8, y0: -4.9 },
-    { x: 13, y: 0.7, z: 7.15, y0: -4.9 },
-    { x: 18.5, y: 0.7, z: 6.6, y0: -4.7 },
-    { x: 21.4, y: 0.6, z: 5.1, y0: -4.3 },
-    { x: 22.5, y: 0.5, z: 3.3, y0: -4.0 }
-  ], 6);
 
   /* =========================================================
      CONSTRUCTION
@@ -343,8 +345,10 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
     RES = 1;
     const P = {};
     const add = (p, geo, mat, pos, rot, scl) => ctx.add(p, geo, mat, { p: pos, r: rot, s: scl });
-    // pièce latérale : le côté 'b' est un miroir en Z (détails « extérieurs » toujours dehors)
-    const sidePart = (sd, build) => { const part = ctx.group(), inner = ctx.group(); if (sd < 0) inner.scale.set(1, 1, -1); part.add(inner); build(inner); return part; };
+    // pièce latérale : le côté 'b' est un miroir en Z (détails « extérieurs » toujours dehors) ;
+    // ly = os réel / os de conception (les profils sont dessinés pour cuisse = tibia = 41.8, bras 33, avant-bras 31)
+    const sidePart = (sd, build, ly = 1) => { const part = ctx.group(), inner = ctx.group(); inner.scale.set(1, ly, sd < 0 ? -1 : 1); part.add(inner); build(inner); return part; };
+    const kTH = L.th / 41.8, kSH = L.sh / 41.8, kUA = L.ua / 33, kFA = L.fa / 31;
     const YV = new T.Vector3(0, 1, 0);
     // petit élément posé sur un profil (axe Y du géo = normale)
     const onSurf = (parent, tb, th, s, geo, mat, lift = 0) => {
@@ -355,12 +359,12 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
 
     /* ---------- matériaux ---------- */
     const M = ctx.M;
-    const W = M.shell;                                         // blanc laqué
+    const W = ctx.mat({ color: ch.body, roughness: 0.24, metalness: 0.04, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 0.62 }); // blanc laqué
     const GL = ctx.mat({ color: ch.trim, roughness: 0.38, metalness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.18, envMapIntensity: 0.6 }); // gris clair
     const SV = ctx.mat({ color: 0xa9adb4, roughness: 0.3, metalness: 0.75, clearcoat: 0.35, clearcoatRoughness: 0.2, envMapIntensity: 0.95 }); // gris argent
     const GM = ctx.mat({ color: 0x80848c, roughness: 0.36, metalness: 0.6, clearcoat: 0.3, envMapIntensity: 0.7 });   // gris moyen métal
     const GD = ctx.mat({ color: ch.joint, roughness: 0.48, metalness: 0.35, clearcoat: 0.25, envMapIntensity: 0.5 });  // gris foncé (articulations)
-    const BK = ctx.mat({ color: 0x17181c, roughness: 0.5, metalness: 0.2, envMapIntensity: 0.35 });                     // creux sombres
+    const GJ = ctx.mat({ color: 0x6c7078, roughness: 0.42, metalness: 0.45, clearcoat: 0.35, clearcoatRoughness: 0.25, envMapIntensity: 0.65 }); // tambours d'articulation
     const VIS = ctx.mat({ color: 0x06070b, roughness: 0.04, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.5 });
     const SEN = ctx.mat({ color: 0x0a0b0e, roughness: 0.08, metalness: 0.4, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.2 });
     const SEAM = M.seam, RUB = M.rubber, STEEL = M.steel;
@@ -384,14 +388,14 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
       P.head = h;
       for (const [sd, z] of [['f', 1], ['b', -1]]) {
         P[sd + 'sc'] = ctx.group(ctx.mesh(tube('aLoShc', SHC, { nu: 8, nv: 3, c: 0 }), W, { s: [1, 1, z] }));
-        P[sd + 'ua'] = ctx.group(ctx.mesh(tube('aLoUA', UA, { s0: 2, s1: 29, nu: 8, nv: 2, c: 0 }), W));
-        P[sd + 'fa'] = ctx.group(ctx.mesh(tube('aLoFA', FA, { s0: 1, s1: 30, nu: 8, nv: 2, c: 0 }), W));
-        P[sd + 'th'] = ctx.group(ctx.mesh(tube('aLoTH', TH, { s0: -3, s1: 37, nu: 8, nv: 3, c: 0 }), W));
-        P[sd + 'sh'] = ctx.group(ctx.mesh(tube('aLoSH', SH, { s0: 2, s1: 40, nu: 8, nv: 3, c: 0 }), W));
+        P[sd + 'ua'] = ctx.group(ctx.mesh(tube('aLoUA', UA, { s0: 2, s1: 29, nu: 8, nv: 2, c: 0 }), W, { s: [1, L.ua / 33, 1] }));
+        P[sd + 'fa'] = ctx.group(ctx.mesh(tube('aLoFA', FA, { s0: 1, s1: 30, nu: 8, nv: 2, c: 0 }), W, { s: [1, L.fa / 31, 1] }));
+        P[sd + 'th'] = ctx.group(ctx.mesh(tube('aLoTH', TH, { s0: -3, s1: 37, nu: 8, nv: 3, c: 0 }), W, { s: [1, L.th / 41.8, 1] }));
+        P[sd + 'sh'] = ctx.group(ctx.mesh(tube('aLoSH', SH, { s0: 2, s1: 40, nu: 8, nv: 3, c: 0 }), W, { s: [1, L.sh / 41.8, 1] }));
         P[sd + 'kn'] = ctx.group(ctx.mesh(g.cyl(6.5, 6.5, 14, 8, 'z'), GD));
         P[sd + 'el'] = ctx.group(ctx.mesh(g.cyl(5.1, 5.1, 10.6, 8, 'z'), GD));
         P[sd + 'hi'] = ctx.group(ctx.mesh(g.cyl(6, 6, 4, 8, 'z'), GL, { p: [0, 1.5, z * 8.7] }));
-        P[sd + 'fo'] = ctx.group(ctx.mesh(tube('aLoFoot', FOOT, { nu: 8, nv: 3, c: 0 }), W), ctx.mesh(g.box(32, 2.6, 13.6), RUB, { p: [6.4, -5.9, 0] }));
+        P[sd + 'fo'] = ctx.group(ctx.mesh(tube('aLoFoot', FOOT, { nu: 8, nv: 3, c: 0 }), W), ctx.mesh(g.box(33, 2.3, 15), GJ, { p: [6.2, -6.05, 0] }));
         P[sd + 'ha'] = RK.hand(ctx, { side: z, palm: [7.4, 3.6, 7.6], palmMat: W, fingerMat: GL });
       }
       return { parts: P, shZ: 23.5, hpZ: 10.5 };
@@ -440,12 +444,15 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
     /* =====================================================
        TORSE : bassin « short », taille, buste, épaules, sac à dos
        ===================================================== */
+    // lettrages : groupe dynamique, re-miroité en Z quand le robot regarde à gauche (texte lisible)
+    const texts = ctx.group(); texts.userData.noMerge = true;
     function torso() {
-      const t = ctx.group();
+      const t = ctx.group(); t.add(texts);
       // bassin « short » blanc, découpé en V devant/derrière
       add(t, panel('aPel', PEL, (u, v) => { const th = u * 2 * PI; return [th, lerp(PEL_B(th), 14.5, v)]; }, { closed: true, nu: 34, nv: 7, c: 0.8 }), W);
       add(t, sline(g, PEL, u => [u * 2 * PI, 9.6], 0.02, 0.3, 32), SEAM);                 // ceinture
       add(t, sline(g, PEL, u => [PI, lerp(-8, 9.4, u)], 0.02, 0.26, 10), SEAM);            // joint arrière
+      for (const z of [1, -1]) add(t, sline(g, PEL, u => [z * 90 * D, lerp(2.4, 9.4, u)], 0.02, 0.24, 6), SEAM); // joints latéraux
       // capteurs à ultrasons (avant du bassin)
       for (const z of [1, -1]) {
         onSurf(t, PEL, z * 26 * D, 6.6, g.ccyl(1.05, 0.5, 0.15, 14), GL, 0.05);
@@ -461,6 +468,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
       add(t, tube('aChestUp', CHEST, { s0: 33.4, s1: 63.6, nu: 32, nv: 10, c: 0.7, cT: 0.4 }), W);
       // joints verticaux (plastron / flancs)
       for (const z of [1, -1]) add(t, sline(g, CHEST, u => [z * 74 * D, lerp(34, 58.5, u)], 0.02, 0.28, 12), SEAM);
+      for (const z of [1, -1]) add(t, sline(g, CHEST, u => [z * 92 * D, lerp(20, 32, u)], 0.02, 0.26, 6), SEAM);
       // plastron gris argent + son joint
       // (coins arrondis : la largeur angulaire se resserre aux extrémités)
       const plW = y => { const d = Math.max(0, 1 - Math.min(y - 36, 53.6 - y) / 2.8); return (26 + (y - 36) * 0.45 - 7 * (1 - Math.sqrt(Math.max(0, 1 - d * d)))) * D; };
@@ -470,7 +478,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
       add(t, panel('aSensFr', CHEST, shield(21.4, 29.6, 29 * D), { off: 0.15, c: 0.35, t: 0.9, nu: 10, nv: 4 }), GL);
       add(t, panel('aSensWin', CHEST, shield(22.4, 28.6, 25 * D), { off: 0.4, c: 0.3, t: 0.6, nu: 10, nv: 4 }), SEN);
       // logo HONDA (rouge) sur le haut du buste
-      add(t, word('aHonda', g, CHEST, 'HONDA', 56.6, 1.55, 1.75, 1, 0.05, 0.3), RED);
+      add(texts, word('aHonda', g, CHEST, 'HONDA', 56.6, 1.55, 1.75, 1, 0.05, 0.3), RED);
       // col
       add(t, g.ccyl(8.6, 2.6, 0.6, 28), GL, [0.4, 62.4, 0]);
       add(t, g.cyl(7.2, 7.2, 1.2, 24), GD, [0.4, 64.0, 0]);
@@ -482,7 +490,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
       add(t, sline(g, PACK, u => [lerp(-80, 80, u) * D, 61.2], 0.02, 0.28, 16), SEAM);
       // panneau dorsal + lettrage ASIMO
       add(t, panel('aPackPl', PACK, band(PI - 52 * D, PI + 52 * D, 23, 46), { off: 0.35, c: 0.45, t: 1, nu: 14, nv: 6 }), W);
-      add(t, word('aAsimo', g, PACK, 'ASIMO', 37.5, 3.6, 4.0, -1, 0.35, 0.45), GM);
+      add(texts, word('aAsimo', g, PACK, 'ASIMO', 37.5, 3.6, 4.0, -1, 0.35, 0.45), GM);
       // grille d'aération haute
       add(t, panel('aPackGr', PACK, band(PI - 46 * D, PI + 46 * D, 49, 59), { off: 0.15, c: 0.35, t: 1, nu: 12, nv: 4 }), GD);
       const slats = [];
@@ -527,11 +535,11 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
         add(a, tube('aUA', UA, { s0: 5.4, s1: 27.4, nu: 28, nv: 6, c: 0.6 }), W);
         add(a, panel('aUAout', UA, band(52 * D, 128 * D, 9.5, 23.5), { off: 0.3, c: 0.4, t: 1, nu: 10, nv: 6 }), W);
         add(a, sline(g, UA, u => [lerp(-60, 60, u) * D + PI, 25.2], 0.02, 0.24, 12), SEAM);
-      });
+      }, kUA);
     }
     function elbow(sd) {
       return sidePart(sd, e => {
-        add(e, g.ccyl(5.1, 10.6, 0.7, 24, 'z'), GD);
+        add(e, g.ccyl(5.1, 10.6, 0.7, 24, 'z'), GJ);
         for (const z of [1, -1]) {
           add(e, g.ccyl(3.6, 1, 0.3, 18, 'z'), GL, [0, 0, z * 5.4]);
           add(e, g.cyl(1.2, 1.2, 0.6, 8, 'z'), STEEL, [0, 0, z * 5.9]);
@@ -553,7 +561,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
         add(f, g.ccyl(4.35, 2.6, 0.55, 22), GL, [0, 28.4, 0]);
         add(f, g.cyl(4.0, 4.0, 0.5, 22), GD, [0, 27.0, 0]);
         add(f, g.ccyl(3.2, 1.6, 0.3, 18), GD, [0, 30.4, 0]);
-      });
+      }, kFA);
     }
 
     /* ---------- MAIN : dos blanc, paume grise, 4 doigts + pouce gris clair ---------- */
@@ -618,11 +626,12 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
         add(t, panel('aTHfront', TH, band(140 * D, 218.5 * D, 1, 35.4), { off: 0.15, c: 0.5, t: 1.3, nu: 10, nv: 9 }), W);
         // joint horizontal bas + liseré gris au-dessus du genou
         add(t, tube('aTHcuff', TH, { s0: 36.0, s1: 38.2, off: -0.5, nu: 24, nv: 1, c: 0.3 }), GL);
-      });
+      }, kTH);
     }
     function knee(sd) {
       return sidePart(sd, k => {
-        add(k, g.ccyl(6.5, 14.2, 0.8, 26, 'z'), GD);
+        add(k, g.ccyl(6.5, 14.2, 0.8, 26, 'z'), GJ);
+        add(k, fuse('aKneeRibs', [-4.6, 4.6].map(z => [g.cyl(6.62, 6.62, 0.5, 26, 'z'), [0, 0, z]])), GD);
         add(k, g.shape('asimoKneecap', s => {
           s.moveTo(-5.0, -7.2); s.quadraticCurveTo(-8.6, -6.0, -9.8, -1.6); s.quadraticCurveTo(-10.4, 3.4, -7.8, 7.6);
           s.lineTo(-5.2, 8.8); s.quadraticCurveTo(-6.4, 4.4, -6.6, 0); s.quadraticCurveTo(-6.4, -3.8, -5.0, -7.2);
@@ -645,26 +654,28 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
         add(s, panel('aSHfrontIn', SH, band(150 * D, 210 * D, 9, 30), { off: 0.45, c: 0.35, t: 0.5, nu: 8, nv: 6 }), W);
         // bracelet de cheville gris
         add(s, tube('aSHcuff', SH, { s0: 37.8, s1: 40.0, off: -0.6, nu: 24, nv: 1, c: 0.3 }), GL);
-      });
+      }, kSH);
     }
     // pied : coque blanche, semelle intermédiaire grise, semelle caoutchouc ; orteil articulé
     // (pivot passif animé dans tick : reste à plat quand le pied bascule pointe en bas)
-    const TOEX = 14, TOEY = -5.4, toes = [];
+    const TOEX = 14, TOEY = -5.0, toes = [];
     function foot(sd, key) {
       return sidePart(sd, f => {
         add(f, g.ccyl(4.6, 10.8, 0.6, 20, 'z'), GD);
-        add(f, tube('aFoot', FOOT, { nu: 26, nv: 7, c: 0.7 }), W);
-        add(f, tube('aSole', SOLE, { s1: 13.7, nu: 16, nv: 4, c: 0.5 }), RUB);
-        add(f, tube('aMid', MID, { s1: 13.7, nu: 16, nv: 4, c: 0.4 }), GL);
-        add(f, g.cbox(1.4, 5.2, 12, 0.3), GD, [13.9, -4.0, 0]);
-        add(f, sline(g, FOOT, u => [lerp(-80, 80, u) * D, -6.8], 0.02, 0.24, 12), SEAM);
+        add(f, tube('aFoot', FOOT, { nu: 26, nv: 8, c: 0.7 }), W);
+        add(f, tube('aSole', SOLE, { s1: 13.7, nu: 18, nv: 4, c: 0.45 }), GJ);
+        add(f, tube('aTread', TREAD, { s1: 13.7, nu: 14, nv: 3, c: 0.15 }), RUB);
+        add(f, g.cbox(1.4, 3.6, 12.4, 0.3), GD, [13.9, -3.2, 0]);
+        add(f, sline(g, FOOT, u => [lerp(-80, 80, u) * D, -7.0], 0.02, 0.22, 12), SEAM);
+        add(f, sline(g, FOOT, u => [lerp(-84, 84, u) * D, 7.6], 0.02, 0.2, 12), SEAM);
         for (const z of [1, -1]) {
-          add(f, g.ccyl(3.4, 1.2, 0.35, 16, 'z'), GL, [0, 0, z * 5.6]);
-          add(f, g.cyl(1.3, 1.3, 0.5, 8, 'z'), STEEL, [0, 0, z * 6.25]);
+          add(f, g.ccyl(3.5, 1.2, 0.35, 18, 'z'), GL, [0, 0, z * 7.1]);
+          add(f, g.cyl(1.3, 1.3, 0.5, 8, 'z'), STEEL, [0, 0, z * 7.75]);
         }
         const toe = ctx.group(); toe.position.set(TOEX, TOEY, 0); toe.userData.noMerge = true;
-        add(toe, fuse('aToeW', [[tube('aToe', TOE, { nu: 24, nv: 3, c: 0.6 }), [-TOEX, -TOEY, 0]]]), W);
-        add(toe, fuse('aToeS', [[tube('aSoleT', SOLE, { s0: 14.3, nu: 14, nv: 3, c: 0.5 }), [-TOEX, -TOEY, 0]], [tube('aMidT', MID, { s0: 14.3, nu: 14, nv: 3, c: 0.4 }), [-TOEX, -TOEY, 0]]]), GL);
+        add(toe, fuse('aToeW', [[tube('aToe', TOE, { nu: 22, nv: 3, c: 0.6 }), [-TOEX, -TOEY, 0]]]), W);
+        add(toe, fuse('aToeS', [[tube('aSoleT', SOLE, { s0: 14.3, nu: 14, nv: 3, c: 0.45 }), [-TOEX, -TOEY, 0]]]), GJ);
+        add(toe, fuse('aToeR', [[tube('aTreadT', TREAD, { s0: 14.3, nu: 12, nv: 2, c: 0.15 }), [-TOEX, -TOEY, 0]]]), RUB);
         f.add(toe); toes.push([key, toe]);
       });
     }
@@ -689,6 +700,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimo = (function () {
       const sup = state && (state.st === 'super' || state.st === 'special');
       LED.emissiveIntensity = LED.userData.baseI * ((sup ? 1.6 : 0.75) + 0.25 * Math.sin(t * 2.2));
       for (const [k, toe] of toes) toe.rotation.z = Math.min(38 * D, Math.max(0, -P[k].rotation.z * 0.85));
+      texts.scale.z = state && state.face < 0 ? -1 : 1;
     };
     return { parts: P, shZ: 23.5, hpZ: 10.5, tick };
   };
