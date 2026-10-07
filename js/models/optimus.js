@@ -294,6 +294,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
     const ST = M.steel, SE = M.seam, RU = ctx.mat({ color: 0x0e0f11, roughness: 0.62, metalness: 0.05, envMapIntensity: 0.3 });
     const TX = ctx.mat({ color: 0x5b5e65, roughness: 0.45, metalness: 0.25 });   // lettrage
     const LED = ctx.glow(0x46f0ff, 3.4);
+    let LETTERS = null; // lettrage « TESLA » (retourné selon le sens du combattant)
     const GM = ctx.mat({ color: 0x24272d, roughness: 0.28, metalness: 0.55, clearcoat: 0.8, clearcoatRoughness: 0.15, envMapIntensity: 0.7 }); // gunmetal (bassin)
     const HM = ctx.mat({ color: 0x4a4e57, roughness: 0.32, metalness: 0.85, envMapIntensity: 0.95 }); // main
     const FM = ctx.mat({ color: 0x6b7079, roughness: 0.3, metalness: 0.85, envMapIntensity: 1.0 }); // doigts
@@ -408,7 +409,9 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
           strokes.push([g.box(0.5, st[3], st[2]), null, Mg.clone().multiply(Ms)]);
         }
       }
-      add(torso, fuse('optTESLA', strokes), TX);
+      // groupe à part (non fusionné) : retourné selon le sens du combattant pour rester lisible
+      LETTERS = new T.Group(); LETTERS.userData.noMerge = true; torso.add(LETTERS);
+      add(LETTERS, fuse('optTESLA', strokes), TX);
 
       // --- structure d'épaule (pont vers les épaulières) ---
       for (const z of [1, -1]) {
@@ -602,6 +605,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
     }
 
     const tick = ctx.override ? undefined : (t, state) => {
+      if (LETTERS && state && state.face) LETTERS.scale.z = state.face;
       const sup = state && (state.st === 'super' || state.st === 'special');
       LED.emissiveIntensity = LED.userData.baseI * ((sup ? 1.5 : 0.88) + 0.12 * Math.sin(t * 2.4));
     };
