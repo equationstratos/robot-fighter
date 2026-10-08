@@ -41,7 +41,7 @@ const R3 = (function () {
   const pmrem = new T.PMREMGenerator(fightR);
   const roomEnv = scene.environment, plateEnv = [];
   // reflets : la photo du décor sert aussi de carte d'environnement (néons reflétés sur les robots)
-  const plateTex = PLATES.map((p, i) => { const t = loader.load(p.img, tx => { try { plateEnv[i] = pmrem.fromEquirectangular(tx).texture; if (curStage === i) scene.environment = plateEnv[i]; } catch (e) { } }); t.colorSpace = T.SRGBColorSpace; return t; });
+  const plateTex = PLATES.map((p, i) => { const t = loader.load(p.img, tx => { try { plateEnv[i] = pmrem.fromEquirectangular(tx).texture; if (curArena && curArena.kind === 'plate' && curArena.plate === i) scene.environment = plateEnv[i]; } catch (e) { } }); t.colorSpace = T.SRGBColorSpace; return t; });
   const plateMat = new T.MeshBasicMaterial({ map: plateTex[0], toneMapped: false });
   const plate = new T.Mesh(new T.PlaneGeometry(1, 1), plateMat);
   {
@@ -63,6 +63,16 @@ const R3 = (function () {
   const reflQuad = new T.Mesh(new T.PlaneGeometry(2, 2), reflMat);
   reflQuad.frustumCulled = false; reflQuad.renderOrder = -1; scene.add(reflQuad);
   const REFL_OP = [0.6, 0.32];
+  // assombrissement du décor 3D pendant un SUPER : quadrilatère plein écran qui multiplie l'image (avant les robots)
+  const dimMat = new T.ShaderMaterial({
+    uniforms: { k: { value: 1 } },
+    vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: 'uniform float k; void main(){ gl_FragColor = vec4(vec3(k), 1.0); }',
+    depthTest: false, depthWrite: false, transparent: false,
+    blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.ZeroFactor, blendDst: T.SrcColorFactor
+  });
+  const dimQuad = new T.Mesh(new T.PlaneGeometry(2, 2), dimMat);
+  dimQuad.frustumCulled = false; dimQuad.renderOrder = -2.5; dimQuad.visible = false; scene.add(dimQuad);
   const floor = new T.Mesh(new T.PlaneGeometry(6000, 3000), new T.ShadowMaterial({ opacity: 0.55 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
   const hemi = new T.HemisphereLight(0xffffff, 0x222222, 1); scene.add(hemi);
@@ -80,7 +90,43 @@ const R3 = (function () {
   composer.addPass(bloom);
   composer.addPass(new T.OutputPass());
 
-  let curStage = -1, sizeKey = '';
+  let curArena = null, LC = PLATES[0], sizeKey = '';
+  const arenaCache = {};
+  // construit (une fois) le décor 3D d'une arène
+  function arenaBuild(a) {
+    if (arenaCache[a.id]) return arenaCache[a.id];
+    const def = ARENA3D[a.id];
+    if (!def) return null;
+    const t0 = performance.now();
+    const S = makeArenaCtx(T, { quality });
+    let res;
+    try { res = def.build(S) || {}; } catch (e) { console.error('Arène', a.id, 'en erreur', e); return (arenaCache[a.id] = null); }
+    const root = res.root || new T.Group();
+    root.traverse(o => {
+      if (o.isMesh || o.isPoints || o.isInstancedMesh) {
+        if (o.renderOrder === 0) o.renderOrder = -3;
+        o.receiveShadow = o.userData.receiveShadow !== false && !o.isPoints;
+        o.castShadow = !!o.userData.castShadow;
+      }
+    });
+    // reflets : le décor rendu en cubemap depuis la zone de combat
+    let env = roomEnv;
+    if ((def.light.env || 'scene') === 'scene') {
+      try {
+        const es = new T.Scene(); es.background = new T.Color(def.light.bg != null ? def.light.bg : 0x000000);
+        if (def.light.fog) es.fog = def.light.fog.density ? new T.FogExp2(def.light.fog.color, def.light.fog.density) : new T.Fog(def.light.fog.color, def.light.fog.near, def.light.fog.far);
+        es.add(new T.HemisphereLight(def.light.hemi[0], def.light.hemi[1], def.light.hemi[2]));
+        const dl = new T.DirectionalLight(def.light.key[0], def.light.key[1]); dl.position.set(-0.3, 1, 0.5); es.add(dl);
+        root.position.set(-STAGE_W / 2, -120, 0); es.add(root);
+        env = pmrem.fromScene(es, 0.02, 5, 20000).texture;
+        es.remove(root); root.position.set(0, 0, 0);
+      } catch (e) { console.warn('env arène', e); env = roomEnv; root.position.set(0, 0, 0); }
+    }
+    const fog = def.light.fog ? (def.light.fog.density ? new T.FogExp2(def.light.fog.color, def.light.fog.density) : new T.Fog(def.light.fog.color, def.light.fog.near, def.light.fog.far)) : null;
+    root.visible = false; scene.add(root);
+    let tris = 0; root.traverse(o => { if (o.isMesh && o.geometry) { const g = o.geometry; tris += (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); } });
+    return (arenaCache[a.id] = { def, root, res, S, env, fog, bg: new T.Color(def.light.bg != null ? def.light.bg : 0x000000), stats: { ms: Math.round(performance.now() - t0), tris: Math.round(tris) } });
+  }
   // qualité adaptative : 0 = maximale, 1 = intermédiaire, 2 = économique (mobiles lents)
   const QS = [{ res: 1, bloom: true, shadow: [2048, 1024], refl: 0.5 }, { res: 0.8, bloom: true, shadow: [1024, 512], refl: 0.33 }, { res: 0.62, bloom: false, shadow: [512, 256], refl: 0 }];
   const qParam = new URLSearchParams(location.search).get('q');
@@ -98,14 +144,29 @@ const R3 = (function () {
     if (emaN > 90 && ema > 27 && quality < 2) { slowN++; if (slowN > 60) { setQuality(quality + 1); slowN = 0; emaN = 0; ema = 16; } }
     else slowN = 0;
   }
-  function setStage(i) {
-    if (i === curStage) return; curStage = i;
-    const c = PLATES[i];
-    plateMat.map = plateTex[i]; plateMat.needsUpdate = true;
-    scene.environment = plateEnv[i] || roomEnv;
+  let curAB = null; // décor 3D affiché
+  function setStage(a) {
+    if (a === curArena) return;
+    let ab = a.kind === '3d' ? arenaBuild(a) : null;
+    if (a.kind === '3d' && !ab) a = ARENAS[0];
+    curArena = a;
+    if (curAB) curAB.root.visible = false;
+    curAB = ab;
+    if (ab) {
+      LC = ab.def.light;
+      ab.root.visible = true; plate.visible = false;
+      floor.material.opacity = LC.catcher || 0; floor.visible = !!LC.catcher;
+      scene.environment = ab.env; scene.fog = ab.fog; scene.background = ab.bg;
+    } else {
+      LC = PLATES[a.plate];
+      plate.visible = true; floor.visible = true; floor.material.opacity = 0.55;
+      plateMat.map = plateTex[a.plate]; plateMat.needsUpdate = true;
+      scene.environment = plateEnv[a.plate] || roomEnv; scene.fog = null; scene.background = null;
+    }
+    const c = LC;
     hemi.color.set(c.hemi[0]); hemi.groundColor.set(c.hemi[1]); hemi.intensity = c.hemi[2];
     key.color.set(c.key[0]); key.intensity = c.key[1];
-    rims.forEach((l, j) => { const r = c.rims[j]; l.color.set(r[0]); l.intensity = r[1]; l.userData.dir = r[2]; });
+    rims.forEach((l, j) => { const r = c.rims[j] || [0, 0, [0, 1, 0]]; l.color.set(r[0]); l.intensity = r[1]; l.userData.dir = r[2]; });
   }
   function resize() {
     const w = Math.round(Math.min(canvas.width, isTouch ? 1100 : 1920) * QS[quality].res), h = Math.round(w * H / W);
@@ -133,8 +194,9 @@ const R3 = (function () {
     for (const [f, m] of fighterModels) if (!keep.includes(f)) { scene.remove(m.rb.root); m.ghosts.forEach(g => scene.remove(g.root)); fighterModels.delete(f); }
   }
 
+  const arenaInfo = { t: 0, dt: 1 / 60, F: null, cx: 0, dim: 1, ko: false, superBy: null, camera: null, h: 540 };
   function renderFight(F, v) {
-    resize(); setStage(F.stageIdx);
+    resize(); setStage(F.arena || ARENAS[0]);
     clearFight(F.p);
     const d = (HF / 2) / (v.Z * TANH), camY = (GY - PY) / v.Z;
     camera.position.set(v.cx, camY, d); camera.quaternion.identity();
@@ -146,11 +208,20 @@ const R3 = (function () {
     }
     camera.updateMatrixWorld(true);
     // lumières
-    key.position.set(v.cx - 260, 900, 520); key.target.position.set(v.cx, 0, 0);
+    const kp = LC.keyPos || [-260, 900, 520];
+    key.position.set(v.cx + kp[0], kp[1], kp[2]); key.target.position.set(v.cx, 0, 0);
     rims.forEach(l => { const dd = l.userData.dir || [0, 1, 0]; l.position.set(v.cx + dd[0] * 600, 200 + dd[1] * 600, dd[2] * 600); l.target.position.set(v.cx, 120, 0); });
     const dim = F.superFreeze > 0 ? 1 - 0.7 * Math.min(1, (62 - F.superFreeze) / 8) : 1;
     plateMat.color.setScalar(dim);
-    hemi.intensity = PLATES[curStage].hemi[2] * (0.5 + 0.5 * dim);
+    hemi.intensity = LC.hemi[2] * (0.5 + 0.5 * dim);
+    if (curAB) {
+      const dk = 1 - (1 - dim) * (LC.dim == null ? 0.72 : LC.dim) / 0.7;
+      dimMat.uniforms.k.value = dk; dimQuad.visible = dk < 0.995;
+      const info = arenaInfo; info.t = F.frame / 60; info.dt = 1 / 60; info.F = F; info.cx = v.cx; info.dim = dim; info.camera = camera;
+      info.ko = F.phase === 'ko'; info.superBy = F.superFreeze > 0 ? F.superBy : null; info.h = fightR.domElement.height;
+      for (const fn of curAB.S._updates) fn(info.t, info);
+      if (curAB.res.update) curAB.res.update(info.t, info);
+    } else dimQuad.visible = false;
     // robots
     let li = 0;
     const light = (x, y, col, I) => { if (li >= fxLights.length) return; const l = fxLights[li++]; l.position.set(x, GROUND - y, 60); l.color.set(col); l.intensity = I; };
@@ -175,16 +246,20 @@ const R3 = (function () {
     if (rq) {
       const roots = [];
       for (const m of fighterModels.values()) { roots.push(m.rb.root); m.ghosts.forEach(g => g.root.visible && roots.push(g.root)); }
-      plate.visible = false; floor.visible = false; reflQuad.visible = false;
+      const fv = floor.visible, dv = dimQuad.visible;
+      plate.visible = false; floor.visible = false; reflQuad.visible = false; dimQuad.visible = false;
+      if (curAB) curAB.root.visible = false;
       roots.forEach(r => { r.position.y = -r.position.y; r.scale.y = -r.scale.y; });
       fightR.shadowMap.autoUpdate = false;
       fightR.setRenderTarget(reflRT); fightR.setClearColor(0x000000, 0); fightR.clear(); fightR.render(scene, camera); fightR.setRenderTarget(null);
       fightR.shadowMap.autoUpdate = true;
       roots.forEach(r => { r.position.y = -r.position.y; r.scale.y = -r.scale.y; });
-      plate.visible = true; floor.visible = true; reflQuad.visible = true;
+      plate.visible = !curAB; floor.visible = fv; reflQuad.visible = true; dimQuad.visible = dv;
+      if (curAB) curAB.root.visible = true;
       pv.set(v.cx, 0, 0).project(camera);
       reflMat.uniforms.ground.value = (pv.y + 1) / 2;
-      reflMat.uniforms.opacity.value = REFL_OP[curStage] * dim;
+      reflMat.uniforms.opacity.value = (curAB ? (LC.refl || 0) : REFL_OP[curArena.plate]) * dim;
+      reflQuad.visible = reflMat.uniforms.opacity.value > 0.005;
     }
     composer.render();
     return fightR.domElement;
@@ -213,9 +288,10 @@ const R3 = (function () {
   const sRim2 = new T.DirectionalLight(0x6fb8ff, 1.4); sRim2.position.set(-500, 100, -300); sScene.add(sRim2);
   const studioModels = {};
   function studio(ch, pose, face, frame, opts = {}) {
-    let rb = studioModels[ch.id];
-    if (!rb) { rb = studioModels[ch.id] = buildRobot(ch); sScene.add(rb.root); }
-    for (const id in studioModels) studioModels[id].root.visible = id === ch.id;
+    const ck = chKey(ch);
+    let rb = studioModels[ck];
+    if (!rb) { rb = studioModels[ck] = buildRobot(ch); sScene.add(rb.root); }
+    for (const id in studioModels) studioModels[id].root.visible = id === ck;
     const S = skeleton(ch, pose.sx !== 1 ? Object.assign({}, pose, { sx: 1 }) : pose, 1);
     poseRobot(rb, pose, 0, GROUND - S._low, face, opts.yaw == null ? -0.42 : opts.yaw, performance.now() / 1000, opts.st || 'idle');
     setFlash(rb, 0);
@@ -250,7 +326,21 @@ const R3 = (function () {
     const img = studio(ch, pose, face, { cx: hx, cy: hy - 2 * ch.scale, size: 64 * ch.scale }, { yaw, st: 'super' });
     c.drawImage(img, x - size / 2, y - size / 2, size, size);
   }
-  return { ZOOM, GY, PLATES, renderFight, drawFull, headShot, drawHead, poseRobot, project, overlay, perfTick, setQuality, get quality() { return quality; } };
+  // statistiques d'une arène (outil tools/arena.js) : appels de rendu et triangles d'une image complète (robots compris)
+  function arenaStats(id) {
+    const a = arenaCache[id]; if (!a) return null;
+    fightR.info.autoReset = false; fightR.setRenderTarget(null);
+    fightR.info.reset(); fightR.render(scene, camera);
+    const r = { frameCalls: fightR.info.render.calls, frameTris: fightR.info.render.triangles, textures: fightR.info.memory.textures, geometries: fightR.info.memory.geometries };
+    // décor seul (robots masqués, sans la passe d'ombre)
+    const vis = []; for (const m of fighterModels.values()) { vis.push(m.rb.root.visible); m.rb.root.visible = false; }
+    const sm = fightR.shadowMap.autoUpdate; fightR.shadowMap.autoUpdate = false;
+    fightR.info.reset(); fightR.render(scene, camera);
+    r.arenaCalls = fightR.info.render.calls; r.arenaTris = fightR.info.render.triangles;
+    fightR.shadowMap.autoUpdate = sm; let i = 0; for (const m of fighterModels.values()) m.rb.root.visible = vis[i++];
+    fightR.info.autoReset = true; return Object.assign(r, a.stats);
+  }
+  return { ZOOM, GY, PLATES, renderFight, arenaStats, arenaBuild: (i) => arenaBuild(ARENAS[i]), drawFull, headShot, drawHead, poseRobot, project, overlay, perfTick, setQuality, get quality() { return quality; } };
 })();
 
 const ZOOM = R3 ? R3.ZOOM : 1;

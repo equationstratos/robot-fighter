@@ -36,6 +36,9 @@
      <s>fo        pied    (origine = cheville, +X = pointe du pied, semelle sous la cheville
                   à y ≈ -ankleH ; ankleH ≈ 7..9).
    shZ / hpZ : écart latéral des épaules / hanches (unités design).
+   SKINS : ctx.skin = identifiant du skin choisi ('classic' par défaut). Les skins d'un robot sont déclarés dans
+     ROSTER (robots.js) : skins: [{ id, name, ch?: { accent, proj, body, trim, joint, visor } }, ...] (le 1er = d'origine).
+     Le modèle adapte ses couleurs / matières / motifs selon ctx.skin (ctx.ch contient déjà les surcharges ch du skin).
    tick(t, state) facultatif : animations (LED qui pulsent, yeux…). state = { pose, st, face }.
      (face = -1 quand le robot regarde à gauche : tout le modèle est alors en miroir ; pour garder
       un texte lisible, le placer dans un groupe userData.noMerge et faire group.scale.z = state.face)
@@ -148,7 +151,7 @@ const RK = (function () {
     const Ls = skeleton(ch, POSES.idle, 1)._L;
     const L = {}; for (const k in Ls) L[k] = Ls[k] / s;
     const reg = [], glowReg = [];
-    const ctx = { T, RK: api, ch, s, b: ch.bulk, L, lod: lod || 'high', override, g, tex, D };
+    const ctx = { T, RK: api, ch, s, b: ch.bulk, L, lod: lod || 'high', override, g, tex, D, skin: ch.skin || 'classic' };
     ctx.mat = (p = {}) => {
       if (override) return override;
       const m = new T.MeshPhysicalMaterial(Object.assign({ color: 0xffffff, roughness: 0.4, metalness: 0, envMapIntensity: 0.5 }, p));
@@ -392,6 +395,12 @@ const RK = (function () {
       root.add(p);
     }
     root.traverse(o => { if (o.isMesh) { o.castShadow = !override && !o.userData.noShadow; o.frustumCulled = false; } });
+    // teinte « miroir » (même robot des deux côtés, sans skin dédié) : les coques claires prennent la teinte
+    if (ch.tint && !override) {
+      const tc = new T.Color(ch.tint);
+      for (const m of ctx._reg) if (m.color) { const l = m.color.r * 0.3 + m.color.g * 0.59 + m.color.b * 0.11; if (l > 0.3) m.color.lerp(tc.clone().multiplyScalar(l), 0.62); }
+      for (const m of ctx._glow) if (m.emissive) m.emissive.lerp(tc, 0.5);
+    }
     return { root, P: parts, ch, M: ctx.M, mats: ctx._reg, glows: ctx._glow, shZ: (res.shZ || 21) * ch.scale, hpZ: (res.hpZ || 11) * ch.scale, tick: res.tick, flashK: 0 };
   }
 
@@ -452,6 +461,6 @@ const RK = (function () {
     if (rb.flashK === k) return; rb.flashK = k;
     for (const m of rb.mats) if (m.emissive) m.emissive.setScalar(k);
   }
-  const api = { T, g, tex, hand, models, build, pose, setFlash, PLATES, REQUIRED, realData, realMatrix };
+  const api = { T, g, tex, hand, models, build, pose, setFlash, PLATES, REQUIRED, realData, realMatrix, mergePart };
   return api;
 })();

@@ -18,7 +18,9 @@ class Fight {
     this.opt = opt;
     this.p = [new Fighter(ch1, 0), new Fighter(ch2, 1)];
     this.ai = [opt.cpu0 ? new AI(opt.level || 3) : null, opt.cpu1 ? new AI(opt.level || 3) : null];
-    this.stageIdx = R3 ? stageIdx % 2 : stageIdx;
+    // arène (ARENAS, arenas.js) ; décor 2D de repli si WebGL indisponible
+    this.arenaIdx = clamp(stageIdx | 0, 0, ARENAS.length - 1); this.arena = ARENAS[this.arenaIdx];
+    this.stageIdx = this.arena.d2;
     this.stage = STAGES[this.stageIdx];
     this.round = 1; this.frame = 0; this.camX = (STAGE_W - VIEW_W) / 2; this.zoom = 1; this.zx = W / 2; this.zy = H / 2;
     this.paused = false; this.pauseSel = 0; this.showMoves = false;
@@ -195,7 +197,8 @@ class Fight {
   update() {
     // pause
     const startP = pads.some(p => p.pressed.start);
-    if ((escPressed || startP) && this.phase !== 'done') { this.paused = !this.paused; this.pauseSel = 0; this.showMoves = false; AU.sfx('select'); return; }
+    // ÉCHAP ouvre/ferme la pause ; START/ENTRÉE l'ouvre, et dans le menu valide l'option choisie
+    if ((escPressed || (startP && !this.paused)) && this.phase !== 'done') { this.paused = !this.paused; this.pauseSel = 0; this.showMoves = false; AU.sfx('select'); return; }
     if (this.paused) return this.updatePause();
     this.frame++;
     for (const k in this.combo) if (this.combo[k] && ++this.combo[k].t > 70) this.combo[k] = null;
@@ -284,16 +287,16 @@ class Fight {
       if (this.phaseT > 170) {
         const w = this.p.find(f => f.wins >= 2);
         if (w || this.round >= 5) { this.phase = 'done'; this.opt.onEnd(w ? w.side : (a.wins >= b.wins ? 0 : 1)); }
-        else { this.round++; this.startRound(); AU.playTrack(TRACKS[this.stage.track]); }
+        else { this.round++; this.startRound(); AU.playTrack(arenaTrack(this.arena)); }
       }
     }
   }
   pauseItems() {
     if (!this.tr) return [['CONTINUER', 'resume'], ['LISTE DES COUPS', 'moves'], ['QUITTER', 'quit']];
     return [['CONTINUER', 'resume'], ['MANNEQUIN :  ◀ ' + DUMMY_NAMES[this.tr.dummy] + ' ▶', 'dummy'], ['JAUGE SUPER : ' + (this.tr.superInf ? 'INFINIE' : 'NORMALE'), 'super'],
-      ['REPLACER LES ROBOTS', 'reset'], ['LISTE DES COUPS', 'moves'], ['CHANGER DE ROBOTS', 'select'], ['QUITTER', 'quit']];
+      ['REPLACER LES ROBOTS', 'reset'], ['LISTE DES COUPS', 'moves'], ['CHANGER DE ROBOTS', 'select'], ['CHANGER D\'ARÈNE', 'arena'], ['QUITTER', 'quit']];
   }
-  pauseLayout(n) { return n > 3 ? { y0: 168, dy: 47 } : { y0: 230, dy: 56 }; }
+  pauseLayout(n) { return n > 3 ? { y0: 160, dy: 44 } : { y0: 230, dy: 56 }; }
   updatePause() {
     const pd = pads[0], items = this.pauseItems(), n = items.length, L = this.pauseLayout(n);
     if (this.showMoves) { if (confirmPressed(pd) || tapQueue.length) this.showMoves = false; tapQueue = []; return; }
@@ -312,6 +315,7 @@ class Fight {
     if (act === 'super') { this.tr.superInf = !this.tr.superInf; AU.sfx('move'); }
     if (act === 'reset') { this.resetTraining(); this.paused = false; AU.sfx('confirm'); }
     if (act === 'select') { this.paused = false; this.phase = 'done'; setScene(new SelectScene('training')); }
+    if (act === 'arena') { this.paused = false; this.phase = 'done'; setScene(new ArenaSelectScene('training', st => startTraining(st), this.arenaIdx)); }
     if (act === 'quit') { this.paused = false; this.phase = 'done'; setScene(new TitleScene(true)); }
   }
   /* ---------- rendu ---------- */
@@ -814,6 +818,7 @@ class SelectScene {
   constructor(mode) {
     this.mode = mode; this.t = 0; this.cur = [0, 1]; this.done = [false, !this.two];
     this.out = 0; mergeKeyboards = mode !== 'versus'; setTouchControls(false); this.lock = 0;
+    this.skin = [0, 0]; this.skinSel = [false, false]; this.plock = [0, 0];
     AU.playTrack(TRACKS.select);
     this.anim = 0; this.shake = 0; this.flash = 0; this.demoI = [0, 0];
     FX.clear();
@@ -822,12 +827,13 @@ class SelectScene {
   }
   get two() { return this.mode === 'versus' || this.mode === 'training'; } // deux robots à choisir
   previewX(p) { return p === 0 ? 150 : W - 150; }
+  chOf(p) { return withSkin(ROSTER[this.cur[p]], this.skin[p]); }
   fx(p, kind) {
-    const ch = ROSTER[this.cur[p]], face = p === 0 ? 1 : -1;
+    const ch = this.chOf(p), face = p === 0 ? 1 : -1;
     puppetFx(kind, ch, this.previewX(p), 455, 1.55, face);
     if (kind === 'burst') { this.shake = 12; this.flash = 8; }
   }
-  demo(p) { const ch = ROSTER[this.cur[p]], list = DEMOS(ch); this.pup[p].play(list[this.demoI[p]++ % list.length], this.done[p] ? 'taunt' : null); }
+  demo(p) { const ch = this.chOf(p), list = DEMOS(ch); this.pup[p].play(list[this.demoI[p]++ % list.length], this.done[p] ? 'taunt' : null); }
   tile(i) { const C = SEL_COLS, n = ROSTER.length, row = (i / C) | 0, inRow = Math.min(C, n - row * C), col = i % C; return { x: W / 2 + (col - (inRow - 1) / 2) * 82, y: 322 + row * 84, s: 76 }; }
   update() {
     this.t++; this.anim++;
@@ -838,7 +844,8 @@ class SelectScene {
     for (let p = 0; p < 2; p++) if (!this.pup[p].busy && this.pup[p].idleT > (this.done[p] ? 150 : 200)) this.demo(p);
     // toucher / cliquer le grand robot : il fait une démonstration
     for (const t of taps) for (let p = 0; p < (this.two ? 2 : 1); p++) {
-      if (inRect(t, this.previewX(p) - 120, 120, 240, 340)) { this.demo(p); AU.sfx('select'); }
+      if (this.skinSel[p] && !this.done[p] && inRect(t, this.previewX(p) - 130, 112, 260, 34)) { this.cycleSkin(p, t.x < this.previewX(p) ? -1 : 1); continue; }
+      if (inRect(t, this.previewX(p) - 120, 150, 240, 310)) { this.demo(p); AU.sfx('select'); }
     }
     if (escPressed) { AU.sfx('select'); setScene(new TitleScene(true)); return; }
     if (this.out) { if (++this.out > 75) this.go(); return; }
@@ -848,42 +855,58 @@ class SelectScene {
       // training : le joueur 1 choisit aussi le mannequin, après son propre robot
       if (this.mode === 'training' && p === 1 && (!this.done[0] || this.lock)) continue;
       const pd = this.mode === 'training' ? pads[0] : pads[p];
+      if (this.plock[p] > 0) { this.plock[p]--; continue; }
+      if (this.skinSel[p]) { // choix du skin : ◀ ▶ puis valider ; haut/bas = retour à la grille
+        if (pd.pressed.l) this.cycleSkin(p, -1);
+        if (pd.pressed.r) this.cycleSkin(p, 1);
+        if (pd.pressed.u || pd.pressed.d) { this.skinSel[p] = false; AU.sfx('select'); }
+        else if (confirmPressed(pd)) this.pickChar(p);
+        continue;
+      }
       let c = this.cur[p];
       const N = ROSTER.length, C = SEL_COLS, row = (c / C) | 0, rowStart = row * C, rowLen = Math.min(C, N - rowStart);
       if (pd.pressed.l) c = rowStart + ((c - rowStart - 1 + rowLen) % rowLen);
       if (pd.pressed.r) c = rowStart + ((c - rowStart + 1) % rowLen);
       if (pd.pressed.u || pd.pressed.d) { const col = c - rowStart, nr = (row + 1) % Math.ceil(N / C), nrLen = Math.min(C, N - nr * C); c = nr * C + Math.min(col, nrLen - 1); }
-      if (c !== this.cur[p]) { this.cur[p] = c; AU.sfx('move'); this.pup[p].play('enter'); this.demoI[p] = 0; }
+      if (c !== this.cur[p]) { this.cur[p] = c; this.skin[p] = 0; AU.sfx('move'); this.pup[p].play('enter'); this.demoI[p] = 0; }
       if (confirmPressed(pd)) this.pickChar(p);
     }
     for (const t of taps) for (let i = 0; i < ROSTER.length; i++) {
       const r = this.tile(i);
       if (inRect(t, r.x - r.s / 2, r.y - r.s / 2, r.s, r.s)) {
         const p = this.done[0] ? 1 : 0; if (this.done[p]) break;
-        if (this.cur[p] === i) this.pickChar(p); else { this.cur[p] = i; AU.sfx('move'); this.pup[p].play('enter'); this.demoI[p] = 0; sayName(ROSTER[i]); }
+        if (this.cur[p] === i) this.pickChar(p); else { this.cur[p] = i; this.skin[p] = 0; this.skinSel[p] = false; AU.sfx('move'); this.pup[p].play('enter'); this.demoI[p] = 0; sayName(ROSTER[i]); }
       }
     }
     if (taps.some(t => inRect(t, W / 2 - 90, 500, 180, 34))) { const p = this.done[0] ? 1 : 0; if (!this.done[p]) this.pickChar(p); }
   }
+  cycleSkin(p, d) {
+    const n = skinList(ROSTER[this.cur[p]]).length; if (n < 2) return;
+    this.skin[p] = (this.skin[p] + d + n) % n; AU.sfx('move');
+    this.pup[p].play('taunt');
+  }
   pickChar(p) {
+    // robots avec plusieurs skins : 1re validation = choix du skin, 2e = prêt
+    if (skinList(ROSTER[this.cur[p]]).length > 1 && !this.skinSel[p]) { this.skinSel[p] = true; this.plock[p] = 6; AU.sfx('select'); AU.say('Choose your skin', 0.5, 1.05); return; }
+    this.skinSel[p] = false;
     this.done[p] = true; AU.sfx('confirm'); sayName(ROSTER[this.cur[p]]); this.lock = 10;
     this.pup[p].play('confirm', 'taunt');
     if (this.done[0] && this.done[1]) this.out = 1;
   }
   go() {
-    GAME.p1 = this.cur[0];
+    GAME.p1 = this.cur[0]; GAME.c1 = this.chOf(0);
+    if (this.two) { // combat miroir : le second prend un autre skin (ou une teinte)
+      GAME.p2 = this.cur[1]; GAME.c2 = this.chOf(1);
+      if (chKey(GAME.c2) === chKey(GAME.c1)) GAME.c2 = withSkin(GAME.c2, 'mirror');
+    }
     if (this.mode === 'arcade') {
       const others = ROSTER.map((_, i) => i).filter(i => i !== GAME.p1);
       for (let i = others.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[others[i], others[j]] = [others[j], others[i]]; }
       GAME.ladder = others; GAME.idx = 0;
       startArcadeFight();
     } else if (this.mode === 'tournament') startTournament();
-    else if (this.mode === 'training') { GAME.p2 = this.cur[1]; startTraining(); }
-    else {
-      GAME.p2 = this.cur[1];
-      const st = (Math.random() * STAGES.length) | 0;
-      setScene(new VsScene(ROSTER[GAME.p1], ROSTER[GAME.p2], st, () => startVersusFight(st)));
-    }
+    else if (this.mode === 'training') setScene(new ArenaSelectScene('training', st => startTraining(st)));
+    else setScene(new ArenaSelectScene('versus', st => setScene(new VsScene(GAME.c1, GAME.c2, st, () => startVersusFight(st)))));
   }
   draw() {
     const c = ctx;
@@ -896,7 +919,7 @@ class SelectScene {
     // grands aperçus
     const showP2 = this.two;
     for (let p = 0; p < (showP2 ? 2 : 1); p++) {
-      const ch = ROSTER[this.cur[p]], left = p === 0;
+      const ch = this.chOf(p), left = p === 0;
       const x = left ? 150 : W - 150;
       const g = c.createRadialGradient(x, 250, 10, x, 250, 190);
       g.addColorStop(0, hexA(ch.accent, 0.4)); g.addColorStop(1, hexA(ch.accent, 0));
@@ -907,8 +930,9 @@ class SelectScene {
       const fl = c.createRadialGradient(x, 458, 4, x, 458, 120); fl.addColorStop(0, hexA(ch.accent, 0.55)); fl.addColorStop(1, hexA(ch.accent, 0));
       c.fillStyle = fl; c.beginPath(); c.ellipse(x, 458, 120, 22, 0, 0, 7); c.fill(); c.restore();
       drawRobotAny(c, ch, st.pose, x + st.dx * 1.55 * (left ? 1 : -1), 455 - st.dy * 1.55, left ? 1 : -1, 1.55, { yaw: st.yaw, st: this.done[p] ? 'win' : 'idle' });
-      if (tr && p === 1) txt('MANNEQUIN', x, 124, 10, { color: '#ffd23a', stroke: '#000', sw: 4 });
-      if (this.done[p]) txt('PRÊT !', x, 140, 22, { font: FONT_BIG, italic: true, color: '#fff', stroke: '#000', sw: 6, glow: ch.accent, alpha: 0.6 + 0.4 * Math.sin(this.t * 0.2) });
+      if (tr && p === 1) txt('MANNEQUIN', x, 152, 10, { color: '#ffd23a', stroke: '#000', sw: 4 });
+      this.drawSkinBar(c, p, x);
+      if (this.done[p]) txt('PRÊT !', x, 178, 22, { font: FONT_BIG, italic: true, color: '#fff', stroke: '#000', sw: 6, glow: ch.accent, alpha: 0.6 + 0.4 * Math.sin(this.t * 0.2) });
       txt(ch.name, x, 82, 20, { color: '#fff', stroke: '#000', sw: 5, glow: ch.accent });
       txt(ch.maker + ' · ' + ch.country, x, 106, 9, { color: ch.accent, stroke: '#000', sw: 3 });
       const stat = (lab, v, yy) => {
@@ -920,7 +944,7 @@ class SelectScene {
     }
     if (!showP2) {
       // bio + coups à droite en mode arcade
-      const ch = ROSTER[this.cur[0]];
+      const ch = this.chOf(0);
       c.fillStyle = 'rgba(5,10,25,.8)'; c.fillRect(W - 300, 74, 284, 200); c.strokeStyle = ch.accent; c.strokeRect(W - 300, 74, 284, 200);
       txt(ch.full, W - 284, 94, 10, { align: 'left', color: ch.accent });
       wrapText(c, ch.bio, W - 284, 118, 252, 16, '11px ' + FONT_BIG, '#ddd');
@@ -951,12 +975,113 @@ class SelectScene {
     if (this.out > 40) { c.fillStyle = `rgba(255,255,255,${Math.min(0.8, (this.out - 40) / 30)})`; c.fillRect(0, 0, W, H); }
   }
 }
+// barre de skin sous le nom du robot (si le robot a plusieurs skins)
+SelectScene.prototype.drawSkinBar = function (c, p, x) {
+  const list = skinList(ROSTER[this.cur[p]]); if (list.length < 2) return;
+  const k = this.skin[p], sk = list[k], on = this.skinSel[p] && !this.done[p], y = 129;
+  c.save();
+  c.fillStyle = on ? 'rgba(255,210,58,.16)' : 'rgba(5,10,25,.72)'; c.fillRect(x - 130, y - 15, 260, 30);
+  c.strokeStyle = on ? '#ffd23a' : 'rgba(255,255,255,.25)'; c.lineWidth = on ? 2 : 1; c.strokeRect(x - 130, y - 15, 260, 30);
+  // pastilles de couleur du skin
+  (sk.sw || []).forEach((col, i) => { c.fillStyle = col; c.fillRect(x - 122 + i * 9, y - 6, 7, 12); c.strokeStyle = '#000'; c.lineWidth = 1; c.strokeRect(x - 122 + i * 9, y - 6, 7, 12); });
+  txt((on ? '◀ ' : '') + sk.name + (on ? ' ▶' : ''), x + 6, y, 9, { color: on ? '#ffd23a' : '#fff', stroke: '#000', sw: 3 });
+  txt(`${k + 1}/${list.length}`, x + 124, y, 7, { align: 'right', color: '#9be7ff' });
+  if (!on && !this.done[p]) txt('SKINS : valider pour choisir', x, y + 22, 7, { color: '#9be7ff', stroke: '#000', sw: 3, alpha: this.t % 50 < 34 ? 1 : 0.4 });
+  if (on) txt('◀ ▶ changer · valider', x, y + 22, 7, { color: '#ffd23a', stroke: '#000', sw: 3 });
+  c.restore();
+};
 function wrapText(c, s, x, y, maxW, lh, font, col) {
   c.save(); c.font = font; c.fillStyle = col; c.textAlign = 'left'; c.textBaseline = 'top';
   let line = '';
   for (const w of s.split(' ')) { const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line) { c.fillText(line, x, y); y += lh; line = w; } else line = t; }
   if (line) c.fillText(line, x, y);
   c.restore();
+}
+
+/* =================== CHOIX DE L'ARÈNE =================== */
+const ARENA_IMG = {};
+function arenaImg(id) { // vignettes pré-rendues : assets/arenas/<id>.jpg (640×360)
+  if (!ARENA_IMG[id]) { const im = new Image(); im.src = 'assets/arenas/' + id + '.jpg'; ARENA_IMG[id] = im; }
+  const im = ARENA_IMG[id]; return im.complete && im.naturalWidth ? im : null;
+}
+ARENAS.forEach(a => arenaImg(a.id)); // préchargement
+class ArenaSelectScene {
+  constructor(mode, next, cur) {
+    this.mode = mode; this.next = next; this.t = 0; this.out = 0;
+    this.n = ARENAS.length + 1; // + ALÉATOIRE
+    this.cur = cur != null ? cur : (GAME.lastArena != null ? GAME.lastArena : ROSTER[GAME.p2 != null ? GAME.p2 : 0].stage);
+    this.rnd = 0; setTouchControls(false); mergeKeyboards = true;
+    AU.say('Select stage', 0.5, 1);
+  }
+  thumb(i) { const w = 104, gap = 8, x0 = (W - (this.n * w + (this.n - 1) * gap)) / 2; return { x: x0 + i * (w + gap), y: 416, w, h: 58 }; }
+  update() {
+    this.t++; const taps = tapQueue.splice(0), pd = pads[0];
+    if (escPressed) { AU.sfx('select'); setScene(new SelectScene(this.mode)); return; }
+    if (this.out) { if (++this.out > 28) { GAME.lastArena = this.cur; this.next(this.pick); } return; }
+    if (pd.pressed.l || pads[1].pressed.l) { this.cur = (this.cur + this.n - 1) % this.n; AU.sfx('move'); }
+    if (pd.pressed.r || pads[1].pressed.r) { this.cur = (this.cur + 1) % this.n; AU.sfx('move'); }
+    let ok = confirmPressed(pd) || confirmPressed(pads[1]);
+    for (const t of taps) {
+      for (let i = 0; i < this.n; i++) { const r = this.thumb(i); if (inRect(t, r.x, r.y, r.w, r.h)) { if (this.cur === i) ok = true; else { this.cur = i; AU.sfx('move'); } } }
+      if (inRect(t, 200, 70, 560, 315) || inRect(t, W / 2 - 90, 496, 180, 34)) ok = true;
+    }
+    if (this.cur === ARENAS.length && this.t % 6 === 0) this.rnd = (this.rnd + 1) % ARENAS.length;
+    if (ok) {
+      this.pick = this.cur === ARENAS.length ? (Math.random() * ARENAS.length) | 0 : this.cur;
+      this.out = 1; AU.sfx('confirm'); AU.say(ARENAS[this.pick].name.replace('NÉO', 'neo').replace('ARÈNE', 'arena').toLowerCase(), 0.5, 1);
+    }
+  }
+  drawArena(c, i, x, y, w, h, zoom) {
+    const a = ARENAS[i], im = arenaImg(a.id);
+    c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip();
+    if (im) {
+      // léger travelling (Ken Burns) sur l'aperçu
+      const k = zoom ? 1.08 + 0.04 * Math.sin(this.t * 0.01) : 1, dx = zoom ? Math.sin(this.t * 0.006) * w * 0.03 : 0;
+      c.drawImage(im, x - (w * k - w) / 2 + dx, y - (h * k - h) / 2, w * k, h * k);
+    } else {
+      const g = c.createLinearGradient(x, y, x, y + h); g.addColorStop(0, '#16233a'); g.addColorStop(1, '#05070c');
+      c.fillStyle = g; c.fillRect(x, y, w, h);
+      txt(a.name, x + w / 2, y + h / 2, zoom ? 22 : 8, { color: '#9be7ff' });
+    }
+    c.restore();
+  }
+  draw() {
+    const c = ctx, sel = this.cur, isRnd = sel === ARENAS.length, show = isRnd ? this.rnd : sel, a = ARENAS[show];
+    drawGridBg(c, this.t, '#3fa9ff');
+    bigTxt('CHOISISSEZ L\'ARÈNE', W / 2, 38, 34);
+    // grand aperçu
+    const X = 200, Y = 70, PW = 560, PH = 315;
+    c.fillStyle = '#000'; c.fillRect(X - 4, Y - 4, PW + 8, PH + 8);
+    this.drawArena(c, show, X, Y, PW, PH, true);
+    if (isRnd) { c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(X, Y, PW, PH); bigTxt('?', W / 2, Y + PH / 2 - 10, 120); }
+    const g = c.createLinearGradient(0, Y + PH - 90, 0, Y + PH); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.85)');
+    c.fillStyle = g; c.fillRect(X, Y + PH - 90, PW, 90);
+    c.strokeStyle = '#ffd23a'; c.lineWidth = 3; c.strokeRect(X - 2, Y - 2, PW + 4, PH + 4);
+    txt(isRnd ? 'ALÉATOIRE' : a.name, X + 16, Y + PH - 46, 24, { align: 'left', font: FONT_BIG, italic: true, color: '#fff', stroke: '#000', sw: 6 });
+    txt(isRnd ? 'Laissez le hasard choisir' : a.place + '  ·  ' + a.desc, X + 18, Y + PH - 18, 9, { align: 'left', color: '#9be7ff', stroke: '#000', sw: 3 });
+    // robots « à domicile »
+    if (!isRnd) {
+      const home = ROSTER.filter(r => r.stage === show);
+      home.forEach((r, i) => c.drawImage(portrait(r, 84), X + PW - 52 - i * 50, Y + 8, 44, 44));
+      if (home.length) txt('A DOMICILE', X + PW - 8, Y + 62, 7, { align: 'right', color: '#ffd23a', stroke: '#000', sw: 3 });
+    }
+    // combattants
+    if (GAME.c1) c.drawImage(portrait(P1C(), 84), 40, 150, 120, 120);
+    if (GAME.c2) c.drawImage(portrait(P2C(), 84, true), W - 160, 150, 120, 120);
+    txt('VS', W - 100, 300, 18, { font: FONT_BIG, italic: true, color: '#fff', stroke: '#000', sw: 5, alpha: GAME.c2 ? 1 : 0 });
+    // vignettes
+    for (let i = 0; i < this.n; i++) {
+      const r = this.thumb(i), on = i === sel;
+      c.fillStyle = '#000'; c.fillRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
+      if (i < ARENAS.length) this.drawArena(c, i, r.x, r.y, r.w, r.h, false);
+      else { c.fillStyle = '#10182a'; c.fillRect(r.x, r.y, r.w, r.h); txt('?', r.x + r.w / 2, r.y + r.h / 2, 26, { font: FONT_BIG, color: '#ffd23a' }); }
+      if (!on) { c.fillStyle = 'rgba(0,0,0,.45)'; c.fillRect(r.x, r.y, r.w, r.h); }
+      c.strokeStyle = on ? '#ffd23a' : '#3a4250'; c.lineWidth = on ? 3 : 1.5; c.strokeRect(r.x - 1, r.y - 1, r.w + 2, r.h + 2);
+      if (on && this.t % 24 < 12) { c.strokeStyle = '#fff'; c.lineWidth = 1; c.strokeRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8); }
+    }
+    txt(isTouch ? 'Touchez une arène puis l\'aperçu' : '◀ ▶ choisir   ·   ENTREE valider   ·   ECHAP retour', W / 2, 512, 9, { color: '#aaa' });
+    if (this.out) { c.fillStyle = `rgba(255,255,255,${Math.min(0.7, this.out / 20)})`; c.fillRect(0, 0, W, H); }
+  }
 }
 
 /* =================== VS =================== */
@@ -1004,26 +1129,26 @@ class VsScene {
       bigTxt('VS', W / 2, H / 2 - 20, 130 * s, { grad: ['#ffffff', '#ffe14a', '#ff5a00', '#a00000'], glow: '#ff3a00', blur: 40 });
     }
     if (this.label) txt(this.label, W / 2, 34, 14, { color: '#ffd23a', stroke: '#000', sw: 5 });
-    txt('ARÈNE : ' + STAGES[R3 ? this.st % 2 : this.st].name, W / 2, H / 2 + 80, 11, { color: '#fff', stroke: '#000', sw: 4, alpha: t > 40 ? 1 : 0 });
+    txt('ARÈNE : ' + (ARENAS[this.st] || ARENAS[0]).name, W / 2, H / 2 + 80, 11, { color: '#fff', stroke: '#000', sw: 4, alpha: t > 40 ? 1 : 0 });
     if (t < 30 && t > 24) { c.fillStyle = 'rgba(255,255,255,.7)'; c.fillRect(0, 0, W, H); }
   }
 }
 
 /* =================== SCÈNE DE COMBAT =================== */
 class FightScene {
-  constructor(fight) { this.f = fight; setTouchControls(true); AU.playTrack(TRACKS[fight.stage.track]); }
+  constructor(fight) { this.f = fight; setTouchControls(true); AU.playTrack(arenaTrack(fight.arena)); }
   update() { this.f.update(); }
   draw() { this.f.draw(); }
 }
 function startArcadeFight() {
   const opp = GAME.ladder[GAME.idx], st = ROSTER[opp].stage;
   const label = `COMBAT ${GAME.idx + 1} / ${GAME.ladder.length}`;
-  setScene(new VsScene(ROSTER[GAME.p1], ROSTER[opp], st, () => {
+  setScene(new VsScene(P1C(), ROSTER[opp], st, () => {
     mergeKeyboards = true;
-    const f = new Fight(ROSTER[GAME.p1], ROSTER[opp], st, {
+    const f = new Fight(P1C(), ROSTER[opp], st, {
       cpu1: true, level: Math.min(6, 1 + GAME.idx), versus: false,
       onEnd: w => {
-        if (w === 0) { GAME.idx++; if (GAME.idx >= GAME.ladder.length) setScene(new EndingScene(ROSTER[GAME.p1])); else startArcadeFight(); }
+        if (w === 0) { GAME.idx++; if (GAME.idx >= GAME.ladder.length) setScene(new EndingScene(P1C())); else startArcadeFight(); }
         else setScene(new ContinueScene());
       }
     });
@@ -1032,16 +1157,21 @@ function startArcadeFight() {
 }
 function startVersusFight(st) {
   mergeKeyboards = false;
-  const f = new Fight(ROSTER[GAME.p1], ROSTER[GAME.p2], st, {
+  const f = new Fight(P1C(), P2C(), st, {
     versus: true,
-    onEnd: w => setScene(new ResultScene(ROSTER[w === 0 ? GAME.p1 : GAME.p2], w))
+    onEnd: w => setScene(new ResultScene(w === 0 ? P1C() : P2C(), w))
   });
   setScene(new FightScene(f));
 }
 
-function startTraining() {
+// personnages choisis (avec leur skin)
+const P1C = () => GAME.c1 && (GAME.c1.base || GAME.c1).id === ROSTER[GAME.p1].id ? GAME.c1 : ROSTER[GAME.p1];
+const P2C = () => GAME.c2 && (GAME.c2.base || GAME.c2).id === ROSTER[GAME.p2].id ? GAME.c2 : ROSTER[GAME.p2];
+function startTraining(st) {
   mergeKeyboards = true;
-  const f = new Fight(ROSTER[GAME.p1], ROSTER[GAME.p2], ROSTER[GAME.p2].stage, { training: true, versus: false, onEnd: () => setScene(new TitleScene(true)) });
+  if (st == null) st = GAME.trainArena != null ? GAME.trainArena : ROSTER[GAME.p2].stage;
+  GAME.trainArena = st;
+  const f = new Fight(P1C(), P2C(), st, { training: true, versus: false, onEnd: () => setScene(new TitleScene(true)) });
   setScene(new FightScene(f));
 }
 
@@ -1061,10 +1191,10 @@ function tourPlayerMatch(r) { const e = tourEntrants(r), k = e.indexOf(GAME.p1);
 function startTourMatch() {
   const T = GAME.tour, r = T.round, m = tourPlayerMatch(r), e = tourEntrants(r);
   const opp = e[m * 2] === GAME.p1 ? e[m * 2 + 1] : e[m * 2];
-  const st = ROSTER[opp].stage;
-  setScene(new VsScene(ROSTER[GAME.p1], ROSTER[opp], st, () => {
+  const st = r === 2 ? ARENA_STADIUM : ROSTER[opp].stage; // la finale se joue à l'Arène mondiale
+  setScene(new VsScene(P1C(), ROSTER[opp], st, () => {
     mergeKeyboards = true;
-    const f = new Fight(ROSTER[GAME.p1], ROSTER[opp], st, {
+    const f = new Fight(P1C(), ROSTER[opp], st, {
       cpu1: true, level: [3, 4, 6][r], versus: false,
       onEnd: w => tourResult(w, opp, f.p[0].wins, f.p[1].wins)
     });
@@ -1120,7 +1250,7 @@ class BracketScene {
     }
     if (confirmPressed(pd) || taps.length) {
       AU.sfx('confirm');
-      if (T.champion) setScene(new EndingScene(ROSTER[GAME.p1], 'tour'));
+      if (T.champion) setScene(new EndingScene(P1C(), 'tour'));
       else startTourMatch();
     }
   }
@@ -1135,7 +1265,7 @@ class BracketScene {
       c.restore(); return;
     }
     const ch = ROSTER[idx];
-    c.drawImage(portrait(ch, 84), x0 + 2, y0 + 2, h - 4, h - 4);
+    c.drawImage(portrait(idx === GAME.p1 ? P1C() : ch, 84), x0 + 2, y0 + 2, h - 4, h - 4);
     txt(ch.name.replace('UNITREE ', ''), x0 + h + 2, b.y, ch.name.length > 9 ? 8 : 9, { align: 'left', color: st === 'out' ? '#77808c' : '#fff', stroke: '#000', sw: 3 });
     if (st === 'out') { c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(x0, y0, w, h); c.strokeStyle = '#ff3a3a'; c.lineWidth = 3; c.beginPath(); c.moveTo(x0 + 6, y0 + h - 6); c.lineTo(x0 + h - 6, y0 + 6); c.stroke(); }
     const me = idx === GAME.p1;
@@ -1254,7 +1384,7 @@ class ContinueScene {
   }
   draw() {
     const c = ctx; c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
-    const ch = ROSTER[GAME.p1];
+    const ch = P1C();
     const sk = skeleton(ch, POSES.down, 1, 1.6);
     drawRobotAny(c, ch, { ...POSES.down, rot: -90 }, W / 2 - 40, 470, 1, 1.6);
     if (this.n >= 0) {

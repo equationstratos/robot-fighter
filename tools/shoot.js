@@ -3,7 +3,7 @@
    Usage : node tools/shoot.js <id> <sortie.png> [clé=valeur ...]
      ex.  node tools/shoot.js optimus /tmp/o.png
           node tools/shoot.js atlas /tmp/a-head.png view=custom frame=head yaw=-0.8 plate=warehouse
-   Paramètres : voir tools/viewer.js (view, plate, pose, yaw, frame, w, h). */
+   Paramètres : voir tools/viewer.js (view, plate, pose, yaw, frame, w, h, skin). */
 'use strict';
 const http = require('http'), fs = require('fs'), path = require('path');
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('/opt/node-tools/node_modules/playwright'); }

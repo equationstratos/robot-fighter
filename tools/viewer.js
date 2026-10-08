@@ -7,13 +7,15 @@
      pose=idle|hp|hk|lk|lp|crouch|proj|upper|win|taunt|block|hit|jump|chk|rush|down …
      yaw=<radians>                    (custom) orientation : -0.42 = vue de combat, -1.57 = face, 0 = profil
      frame=full|head|hand|torso|legs|feet  (custom) cadrage
-     w=, h=                            (custom) taille de l'image */
+     w=, h=                            (custom) taille de l'image
+     skin=<id>                         skin du robot (ROSTER[].skins), ex. skin=carbon */
 (function () {
   const T = THREE;
   const Q = new URLSearchParams(location.search);
   const id = Q.get('id') || 'optimus';
   const view = Q.get('view') || 'sheet';
-  const ch = ROSTER.find(r => r.id === id);
+  const ch0 = ROSTER.find(r => r.id === id);
+  const ch = Q.get('skin') ? withSkin(ch0, Q.get('skin')) : ch0;
   const out = document.getElementById('out');
   const errors = window.__errors || [];
   const report = { id, view, errors };
@@ -54,7 +56,7 @@
   }
   function floor(sc, op = 0.5) { const f = new T.Mesh(new T.PlaneGeometry(4000, 4000), new T.ShadowMaterial({ opacity: op })); f.rotation.x = -Math.PI / 2; f.receiveShadow = true; sc.add(f); }
 
-  const plateName = Q.get('plate') || (ch.stage % 2 === 0 ? 'lab' : 'warehouse');
+  const plateName = Q.get('plate') || (ch.stage === 1 ? 'warehouse' : 'lab');
   const plateIdx = plateName === 'lab' ? 0 : plateName === 'warehouse' ? 1 : -1;
 
   function makePlateScene(rb, done) {

@@ -8,13 +8,47 @@ const ROSTER = [
     scale: 1.0, leg: 1.0, bulk: 1.0, chest: 1.0, speed: 1.0, power: 1.0, stage: 0,
     proj: { name: 'PLASMA SHOT', style: 'orb', color: '#3fa9ff', core: '#e8f6ff' },
     move: 'uppercut', moveName: 'RISING DYNAMO', sup: 'beam', supName: 'GIGA PLASMA CANNON', throwType: 'suplex', throwName: 'SUPLEX ALLEMAND',
-    bio: 'Le robot humanoïde de Tesla. Mains à 22 degrés de liberté, précision chirurgicale.' },
+    bio: 'Le robot humanoïde de Tesla. Mains à 22 degrés de liberté, précision chirurgicale.',
+    skins: [ // finitions / motifs / lumières : voir SKINS dans js/models/optimus.js
+      { id: 'classic', name: 'ORIGINAL', sw: ['#eef0f3', '#0c0d10', '#46f0ff'] },
+      { id: 'carbon', name: 'NOIR CARBONE', sw: ['#2a2c31', '#0c0d10', '#e9bc62', '#ffbe3c'],
+        ch: { body: '#2a2c31', trim: '#e9bc62', joint: '#141519', accent: '#ffcf5a', proj: { name: 'PLASMA SHOT', style: 'orb', color: '#ffb52e', core: '#fff4d2' } } },
+      { id: 'chrome', name: 'CHROME LIQUIDE', sw: ['#eef1f5', '#9aa3b2', '#2a2240', '#a070ff'],
+        ch: { body: '#e8ebf0', trim: '#0c0d10', joint: '#2b2e35', accent: '#a070ff', proj: { name: 'PLASMA SHOT', style: 'orb', color: '#9a66ff', core: '#f1e8ff' } } },
+      { id: 'rouge', name: 'ROUGE TESLA', sw: ['#b40f20', '#0c0d10', '#eef1f5', '#f2f4ff'],
+        ch: { body: '#b40f20', trim: '#0c0d10', joint: '#2b2e35', accent: '#ff2a3a', proj: { name: 'PLASMA SHOT', style: 'orb', color: '#ff2438', core: '#ffe9eb' } } },
+      { id: 'or', name: 'OR 24 CARATS', sw: ['#ffcf5c', '#b8862e', '#0c0d10', '#ff9326'],
+        ch: { body: '#ffcf5c', trim: '#0c0d10', joint: '#1d1d20', accent: '#ff9a2e', proj: { name: 'PLASMA SHOT', style: 'orb', color: '#ff8f1f', core: '#fff0d6' } } },
+      { id: 'cyber', name: 'CYBERPUNK', sw: ['#1c1c23', '#ff2bd6', '#2fe6ff', '#0c0d10'],
+        ch: { body: '#1c1c23', trim: '#0c0d10', joint: '#141519', accent: '#ff2bd6', visor: '#12051a', proj: { name: 'PLASMA SHOT', style: 'orb', color: '#ff2bd6', core: '#a8fbff' } } },
+      { id: 'arctic', name: 'ARCTIQUE', sw: ['#f6f8ff', '#9fd2f4', '#3b4e66', '#c6f3ff'],
+        ch: { body: '#f6f8ff', trim: '#9fd2f4', joint: '#3b4e66', accent: '#8fe4ff', visor: '#03101f', proj: { name: 'PLASMA SHOT', style: 'orb', color: '#7fdcff', core: '#ffffff' } } },
+      { id: 'army', name: 'MILITAIRE', sw: ['#6c7448', '#866844', '#30342a', '#9cff3a'],
+        ch: { body: '#6c7448', trim: '#2b2e23', joint: '#1d1f19', accent: '#9cff3a', visor: '#0b0d08', proj: { name: 'PLASMA SHOT', style: 'orb', color: '#8cff2e', core: '#f0ffe0' } } }
+    ] },
   { id: 'atlas', name: 'ATLAS', full: 'Atlas électrique', maker: 'BOSTON DYNAMICS', country: 'USA', year: 2024,
     body: '#bfc4cb', trim: '#5e636b', joint: '#1c1d21', accent: '#ffb43a', visor: '#08090b', head: 'atlas', metal: true,
     scale: 1.03, leg: 1.0, bulk: 1.15, chest: 1.12, speed: 0.95, power: 1.12, stage: 3,
     proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#ffb43a', core: '#fff3d6' },
     move: 'flip', moveName: 'PARKOUR FLIP', sup: 'moulinet', supName: 'MOULINET 720', throwType: 'helix', throwName: 'TORSION 360',
-    bio: 'Le nouvel Atlas 100 % électrique. Ses moteurs tournent à 360° : contorsions et prises impossibles pour un humain.' },
+    bio: 'Le nouvel Atlas 100 % électrique. Ses moteurs tournent à 360° : contorsions et prises impossibles pour un humain.',
+    skins: [ // finitions / motifs / lumières : voir SKINS dans js/models/atlas.js
+      { id: 'classic', name: 'ORIGINAL', sw: ['#d2d6dc', '#4f535a', '#141518', '#ffb43a'] },
+      { id: 'magma', name: 'MAGMA', sw: ['#2a2624', '#ff4a0a', '#0f0c0b', '#ffd27a'],
+        ch: { body: '#2a2624', trim: '#0f0c0b', accent: '#ff4a12', proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#ff4a12', core: '#ffe0a0' } } },
+      { id: 'chantier', name: 'CHANTIER', sw: ['#f2b100', '#111214', '#bfc5cc', '#ff7a00'],
+        ch: { body: '#f2b100', trim: '#111214', accent: '#ff7a00', proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#ff8a00', core: '#fff0c0' } } },
+      { id: 'furtif', name: 'FURTIF', sw: ['#3a3e45', '#111216', '#2e3137', '#ff1e3c'],
+        ch: { body: '#3a3e45', trim: '#111216', accent: '#ff1e3c', proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#ff2440', core: '#ffe0e4' } } },
+      { id: 'cuivre', name: 'CUIVRE PATINÉ', sw: ['#c7744b', '#5fb59c', '#e2b863', '#3dffc0'],
+        ch: { body: '#c7744b', trim: '#e2b863', accent: '#3dffc0', proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#3dffc0', core: '#e6fff6' } } },
+      { id: 'emeute', name: 'ANTI-ÉMEUTE', sw: ['#15254b', '#f3f5f8', '#ff1a2e', '#2f7bff'],
+        ch: { body: '#15254b', trim: '#f3f5f8', accent: '#2f7bff', proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#2f7bff', core: '#e6f0ff' } } },
+      { id: 'hydraulique', name: 'HYDRAULIQUE', sw: ['#6c727b', '#2a63dc', '#1a1b1f', '#36d6ff'],
+        ch: { body: '#6c727b', trim: '#2a63dc', accent: '#36d6ff', proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#36d6ff', core: '#e8fbff' } } },
+      { id: 'nacre', name: 'NACRE ROYALE', sw: ['#f3efe9', '#e8c47e', '#121015', '#c77dff'],
+        ch: { body: '#f3efe9', trim: '#e8c47e', accent: '#c77dff', proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#b56bff', core: '#f6ecff' } } }
+    ] },
   { id: 'figure', name: 'FIGURE 02', full: 'Figure 02', maker: 'FIGURE AI', country: 'USA', year: 2024,
     body: '#3b3e44', trim: '#141518', joint: '#2a2c31', accent: '#e8f4ff', visor: '#030304', head: 'figure',
     scale: 1.0, leg: 1.02, bulk: 0.98, chest: 1.0, speed: 1.08, power: 0.96, stage: 0,
@@ -29,7 +63,7 @@ const ROSTER = [
     bio: 'La légende japonaise, pionnier des robots marcheurs depuis 2000.' },
   { id: 'h1', name: 'UNITREE H1', full: 'H1', maker: 'UNITREE', country: 'CHINE', year: 2023,
     body: '#3a3d44', trim: '#1a1b1f', joint: '#5a5e66', accent: '#4dff88', visor: '#050506', head: 'h1',
-    scale: 1.15, leg: 0.85, bulk: 0.9, chest: 0.92, speed: 1.15, power: 0.95, stage: 2,
+    scale: 1.15, leg: 0.85, bulk: 0.9, chest: 0.92, speed: 1.15, power: 0.95, stage: 5,
     proj: { name: 'VOLT SPHERE', style: 'orb', color: '#4dff88', core: '#eafff1' },
     move: 'rush', moveName: 'SPEED RECORD', sup: 'rush', supName: 'HYPERSPEED BARRAGE', throwType: 'takedown', throwName: 'DOUBLE-LEG SLAM',
     bio: 'Détenteur du record de vitesse des humanoïdes : 3,3 m/s.' },
@@ -47,13 +81,13 @@ const ROSTER = [
     bio: 'Jambes d\'autruche, genoux inversés. Le roi de l\'entrepôt.' },
   { id: 't800', name: 'T800', full: 'EngineAI T800 (REK)', maker: 'ENGINEAI · REK', country: 'CHINE', year: 2025,
     body: '#e9ebee', trim: '#5d6168', joint: '#3c3f45', accent: '#4aa8ff', visor: '#101216', head: 'figure', kicker: true,
-    scale: 1.06, leg: 1.04, bulk: 1.06, chest: 1.06, speed: 1.0, power: 1.18, stage: 1,
+    scale: 1.06, leg: 1.04, bulk: 1.06, chest: 1.06, speed: 1.0, power: 1.18, stage: 6,
     proj: { name: 'CORE BLAST', style: 'orb', color: '#4aa8ff', core: '#e6f3ff' },
     move: 'spin', moveName: 'CYCLONE KICK', sup: 'storm', supName: 'DÉCAPITATEUR', throwType: 'takedown', throwName: 'OCTAGON SLAM',
     bio: 'Le poids lourd d\'EngineAI : 1,85 m, 85 kg, 41 articulations, 450 N·m. Star des combats REK, ses coups de pied ont décapité un androïde.' },
   { id: 'apollo', name: 'APOLLO', full: 'Apollo', maker: 'APPTRONIK', country: 'USA', year: 2023,
     body: '#e9e6df', trim: '#2c2f36', joint: '#3e424a', accent: '#ff6a2b', visor: '#121419', head: 'apollo',
-    scale: 1.02, leg: 1.0, bulk: 1.08, chest: 1.1, speed: 0.92, power: 1.15, stage: 3,
+    scale: 1.02, leg: 1.0, bulk: 1.08, chest: 1.1, speed: 0.92, power: 1.15, stage: 4,
     proj: { name: 'IGNITION ORB', style: 'orb', color: '#ff6a2b', core: '#fff0e0' },
     move: 'uppercut', moveName: 'LIFT-OFF', sup: 'storm', supName: 'SATURN V STRIKE', throwType: 'suplex', throwName: 'SUPLEX ALLEMAND',
     bio: 'Né des recherches de la NASA. Force brute et fiabilité.' }
@@ -428,10 +462,30 @@ function drawHead(c, ch, s, pal, out, opt = {}) {
   noGlow();
 }
 
+/* ---------- skins (variantes de couleurs / thèmes) ----------
+   ch.skins = [{ id, name, ch?: {accent, proj, body, ...} }, ...] — le premier est le skin d'origine.
+   withSkin(ch, idOuIndex) → personnage dérivé (même id, key = id#skin), mis en cache ; le modèle 3D lit ch.skin.
+   'mirror' : pour un combat miroir, skin suivant si le robot en a, sinon teinte automatique. */
+const SKIN_CACHE = {};
+function skinList(ch) { return (ch.base || ch).skins || [{ id: 'classic', name: 'ORIGINAL' }]; }
+function withSkin(ch, s) {
+  const base = ch.base || ch, list = skinList(base);
+  if (s === 'mirror') {
+    if (list.length > 1) return withSkin(base, (list.findIndex(x => x.id === (ch.skin || list[0].id)) + 1) % list.length);
+    const key = base.id + '#mirror';
+    return SKIN_CACHE[key] || (SKIN_CACHE[key] = Object.assign({}, base, { base, key, skin: 'mirror', skinName: 'MIROIR', tint: '#ffb070', accent: shade(base.accent, 0.25) }));
+  }
+  const sk = typeof s === 'number' ? list[((s % list.length) + list.length) % list.length] : (list.find(x => x.id === s) || list[0]);
+  if (sk === list[0]) return base;
+  const key = base.id + '#' + sk.id;
+  return SKIN_CACHE[key] || (SKIN_CACHE[key] = Object.assign({}, base, sk.ch || {}, { base, key, skin: sk.id, skinName: sk.name }));
+}
+const chKey = ch => ch.key || ch.id;
+
 /* ---------- portraits (cache) ---------- */
 const PORTRAIT_CACHE = {};
 function portrait(ch, size = 120, flip = false) {
-  const key = ch.id + size + flip;
+  const key = chKey(ch) + size + flip;
   if (PORTRAIT_CACHE[key]) return PORTRAIT_CACHE[key];
   const cv = document.createElement('canvas'); cv.width = cv.height = size;
   const c = cv.getContext('2d');
@@ -453,7 +507,7 @@ function portrait(ch, size = 120, flip = false) {
 // tête détourée (HUD)
 const HEAD_CACHE = {};
 function headShot(ch, size, face = 1) {
-  const key = ch.id + size + face;
+  const key = chKey(ch) + size + face;
   if (HEAD_CACHE[key]) return HEAD_CACHE[key];
   let cv;
   if (typeof R3 !== 'undefined' && R3) cv = R3.headShot(ch, size, face);

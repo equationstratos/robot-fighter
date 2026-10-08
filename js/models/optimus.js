@@ -279,25 +279,270 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
     A: [[-0.55, 0, 0.42, 2.75, -0.4], [0.55, 0, 0.42, 2.75, 0.4]]
   };
 
+  /* =========================================================
+     SKINS : palette / finitions par ctx.skin (ORIGINAL = matériaux d'origine, rien ne change)
+     Chaque entrée remplace des « emplacements » de matériau du modèle :
+       shell (coques blanches) · black (noir laqué) · satin (noir satiné) · visor · graph (actionneurs)
+       steel (vis, disques, tiges) · seam · rubber · text (vis latérales) · letters (lettrage TESLA)
+       gun (plaque de bassin) · palm / finger (main) · led (filet lumineux de la visière)
+       helmet (casque) · coreT / coreS (noyaux visibles dans les joints entre panneaux : torse /
+       taille-tête-épaules-pieds) · coreL (liserés ajoutés au fond des joints des membres)
+       → liserés lumineux ou métalliques
+     Valeur : paramètres de ctx.mat (+ pat/ps/rk : motif triplanaire, inner/ii : lueur interne),
+              { glow, i } pour un matériau émissif, ou le nom d'un autre emplacement.
+     ========================================================= */
+  const SKINS = {
+    // NOIR CARBONE : coques en fibre de carbone vernie, liserés et visserie or, filet LED doré
+    carbon: {
+      shell: { color: 0xffffff, pat: 'carbon', ps: 0.3, rk: 0.7, roughness: 0.4, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 0.85 },
+      gun: { color: 0xffffff, pat: 'carbon', ps: 0.3, rk: 0.7, roughness: 0.4, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 0.85 },
+      graph: { color: 0x2b2824, roughness: 0.28, metalness: 0.9, envMapIntensity: 0.9 },
+      steel: { color: 0xe9bc62, roughness: 0.2, metalness: 1, envMapIntensity: 1.2 },
+      letters: { color: 0xf3c466, roughness: 0.16, metalness: 1, envMapIntensity: 1.3, inner: 0xffa21a, ii: 0.25 },
+      coreT: { color: 0xd9a64a, roughness: 0.24, metalness: 1, envMapIntensity: 1.2, inner: 0xffa020, ii: 0.5 },
+      coreL: 'coreT', coreS: 'coreT',
+      palm: { color: 0x1c1d21, roughness: 0.18, metalness: 1, envMapIntensity: 1.1 },
+      finger: { color: 0x2c2d33, roughness: 0.2, metalness: 1, envMapIntensity: 1.1 },
+      led: { glow: 0xffbe3c, i: 3.8 }
+    },
+    // CHROME LIQUIDE : coques et casque miroir, pièces noires en chrome fumé violine, LED ultraviolet épaissie
+    // (envMapIntensity modéré : un miroir à 1.8 renvoyait les enseignes néon au-delà du seuil du bloom → taches roses)
+    chrome: {
+      shell: { color: 0xe2e6ec, roughness: 0.12, metalness: 1, envMapIntensity: 1.3 },
+      helmet: 'shell',
+      black: { color: 0x2a2240, roughness: 0.14, metalness: 1, envMapIntensity: 1.25 },
+      satin: { color: 0x1d1928, roughness: 0.3, metalness: 0.85, envMapIntensity: 0.9 },
+      letters: { color: 0x07080a, roughness: 0.2, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08 },
+      steel: { color: 0x2a2c31, roughness: 0.12, metalness: 1, envMapIntensity: 1.2 },
+      visor: { color: 0x07050d, roughness: 0.03, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.2 },
+      led: { glow: 0xa070ff, i: 6 }, ledR: 0.5
+    },
+    // ROUGE TESLA : rouge métallisé multicouche (« Ultra Red »), noir laqué, lettrage blanc nacré, LED blanche
+    rouge: {
+      shell: { color: 0xb40f20, roughness: 0.3, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.025, envMapIntensity: 0.85 },
+      letters: { color: 0xf2f4f8, roughness: 0.3, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.6 },
+      led: { glow: 0xf2f4ff, i: 3.4 }
+    },
+    // OR 24 CARATS : placage or poli miroir (sans vernis, qui délavait l'or en cyan), légère chaleur interne
+    // pour qu'il reste « or » sous les néons cyan / verts, noir laqué, LED ambre
+    or: {
+      shell: { color: 0xffcf5c, roughness: 0.15, metalness: 1, envMapIntensity: 1.05, inner: 0xffa230, ii: 0.05 },
+      steel: { color: 0xffd98a, roughness: 0.12, metalness: 1, envMapIntensity: 1.3 },
+      graph: { color: 0x1d1d20, roughness: 0.22, metalness: 1, envMapIntensity: 1.0 },
+      letters: { color: 0x0a0a0c, roughness: 0.25, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1 },
+      finger: { color: 0xe7b354, roughness: 0.22, metalness: 1, envMapIntensity: 1.0 },
+      led: { glow: 0xff9326, i: 3.8 }
+    },
+    // CYBERPUNK : noir mat, joints de panneaux lumineux magenta / cyan, arcs de visière roses
+    cyber: {
+      shell: { color: 0x1c1c23, roughness: 0.62, metalness: 0.1, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.5 },
+      gun: { color: 0x1c1c23, roughness: 0.62, metalness: 0.1, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.5 },
+      visor: { color: 0x12051a, roughness: 0.03, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.2 },
+      letters: { glow: 0x37ecff, i: 2.6 },
+      coreT: { glow: 0xff2bd6, i: 2.6 },
+      coreL: { glow: 0x2fe6ff, i: 2.4 },
+      coreS: 'coreT',
+      led: { glow: 0xff3cdc, i: 4.2 }
+    },
+    // ARCTIQUE : blanc nacré irisé, pièces en glace givrée, joints bleu glacier
+    arctic: {
+      shell: { color: 0xeef4ff, roughness: 0.22, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05, iridescence: 0.55, iridescenceIOR: 1.35, iridescenceThicknessRange: [180, 520], envMapIntensity: 0.55 },
+      black: { color: 0xb4e0ff, pat: 'frost', ps: 1 / 9, roughness: 0.4, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.6, inner: 0x4aa8ff, ii: 0.16 },
+      satin: { color: 0x3b4e66, roughness: 0.32, metalness: 0.75, clearcoat: 0.5, clearcoatRoughness: 0.2, envMapIntensity: 0.8 },
+      helmet: 'shell',
+      visor: { color: 0x03101f, roughness: 0.03, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.2 },
+      letters: { color: 0x5aa8e0, roughness: 0.25, metalness: 0.6, envMapIntensity: 1.0 },
+      coreT: { glow: 0x7fd4ff, i: 1.5 }, coreL: 'coreT', coreS: 'coreT',
+      led: { glow: 0xc6f3ff, i: 3.6 }
+    },
+    // MILITAIRE : camouflage olive mat, noir olive « cerakote », marquages au pochoir, LED vert nuit
+    // (camouflage éclairci + vernis satiné : l'ancien olive mat se fondait dans les décors sombres)
+    army: {
+      shell: { color: 0xffffff, pat: 'camo', ps: 1 / 56, roughness: 0.56, metalness: 0.05, clearcoat: 0.3, clearcoatRoughness: 0.42, envMapIntensity: 0.5 },
+      black: { color: 0x30342a, roughness: 0.5, metalness: 0.25, clearcoat: 0.3, clearcoatRoughness: 0.4, envMapIntensity: 0.45 },
+      satin: { color: 0x22251d, roughness: 0.55, metalness: 0.25, envMapIntensity: 0.4 },
+      helmet: { color: 0x6c7448, roughness: 0.52, metalness: 0.05, clearcoat: 0.3, clearcoatRoughness: 0.42, envMapIntensity: 0.5 },
+      graph: { color: 0x3a3d37, roughness: 0.45, metalness: 0.8, envMapIntensity: 0.6 },
+      steel: { color: 0x9c8a5a, roughness: 0.4, metalness: 0.9, envMapIntensity: 0.7 },
+      letters: { color: 0xd9d0a8, roughness: 0.82 },
+      visor: { color: 0x0b0d08, roughness: 0.05, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.0 },
+      led: { glow: 0x9cff3a, i: 3.2 }
+    }
+  };
+
+  /* ---------- motifs procéduraux (dessinés une fois, en cache) ---------- */
+  const PATS = {};
+  function patTex(kind) {
+    if (PATS[kind]) return PATS[kind];
+    const n = kind === 'camo' ? 512 : 256, cv = document.createElement('canvas'); cv.width = cv.height = n;
+    const c = cv.getContext('2d'), img = c.createImageData(n, n), d = img.data;
+    let r = 9137; const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
+    const put = (i, R, G, B) => { d[i * 4] = R; d[i * 4 + 1] = G; d[i * 4 + 2] = B; d[i * 4 + 3] = 255; };
+    if (kind === 'carbon') { // sergé 2/2 : mèches horizontales / verticales en escalier
+      const cell = 32;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const cx = (x / cell) | 0, cy = (y / cell) | 0, fx = (x % cell + 0.5) / cell, fy = (y % cell + 0.5) / cell;
+        const hor = ((cx + 3 * cy) & 3) < 2;
+        const a = hor ? fy : fx, al = hor ? fx : fy;
+        const round = Math.pow(Math.sin(a * Math.PI), 0.6);
+        const fib = 0.86 + 0.14 * Math.sin((hor ? y : x) * 2.7 + Math.sin((hor ? x : y) * 0.09) * 2);
+        const end = 0.75 + 0.25 * Math.pow(Math.sin(al * Math.PI), 0.3);
+        const v = (hor ? 72 : 40) * round * fib * end + 12;
+        put(y * n + x, v, v, v * 1.06);
+      }
+    } else if (kind === 'camo') { // camouflage « woodland » raccordable (bruit de valeur périodique)
+      const mk = (G) => { const t = Array.from({ length: G * G }, rnd); return (x, y) => {
+        x *= G; y *= G; const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+        const v = (i, j) => t[(((j % G) + G) % G) * G + (((i % G) + G) % G)];
+        return lerp(lerp(v(xi, yi), v(xi + 1, yi), sx), lerp(v(xi, yi + 1), v(xi + 1, yi + 1), sx), sy);
+      }; };
+      const fbm = () => { const a = mk(4), b = mk(8), e = mk(16); return (x, y) => a(x, y) * 0.58 + b(x, y) * 0.3 + e(x, y) * 0.12; };
+      const A = fbm(), B = fbm(), C = fbm(), E = fbm();
+      const COL = { base: [150, 156, 98], brown: [134, 104, 68], dark: [80, 94, 52], black: [38, 40, 33], tan: [204, 192, 142] };
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const u = x / n, v = y / n;
+        let col = COL.base;
+        if (E(u, v) > 0.6) col = COL.tan;
+        if (A(u, v) > 0.54) col = COL.brown;
+        if (B(u, v) > 0.56) col = COL.dark;
+        const k = C(u, v); if (k > 0.6 && k < 0.66) col = COL.black;
+        const gr = 0.94 + rnd() * 0.08;
+        put(y * n + x, col[0] * gr, col[1] * gr, col[2] * gr);
+      }
+    } else if (kind === 'frost') { // glace craquelée : facettes de Voronoï à teinte franche + fines fêlures blanches (raccordable)
+      const pts = Array.from({ length: 26 }, () => [rnd() * n, rnd() * n, rnd()]);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        let d1 = 1e9, d2 = 1e9, cv = 0;
+        for (const [px, py, pv] of pts) for (let oy = -n; oy <= n; oy += n) for (let ox = -n; ox <= n; ox += n) {
+          const dd = (x - px - ox) ** 2 + (y - py - oy) ** 2;
+          if (dd < d1) { d2 = d1; d1 = dd; cv = pv; } else if (dd < d2) d2 = dd;
+        }
+        const e = Math.sqrt(d2) - Math.sqrt(d1);
+        const v = 150 + 40 * cv + (e < 1.2 ? 90 : e < 3 ? 35 * (1 - (e - 1.2) / 1.8) : 0) + 18 * Math.exp(-Math.sqrt(d1) / 30) + rnd() * 6;
+        put(y * n + x, Math.max(0, v - 26), Math.min(255, v + 6), 255);
+      }
+    }
+    c.putImageData(img, 0, 0);
+    const t = new T.CanvasTexture(cv);
+    t.wrapS = t.wrapT = T.RepeatWrapping; t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4;
+    return (PATS[kind] = t);
+  }
+
+  /* ---------- décalcomanies (canvas transparent ; flip = version miroir pour un combattant tourné à gauche) ---------- */
+  function decalTex(kind, flip) {
+    const key = kind + (flip ? '|f' : '');
+    if (PATS[key]) return PATS[key];
+    const W = 256, H = kind === 'roundel' ? 256 : 192, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const c = cv.getContext('2d');
+    if (flip) { c.translate(W, 0); c.scale(-1, 1); }
+    c.fillStyle = '#fff'; c.strokeStyle = '#fff';
+    if (kind === 'roundel') { // étoile dans un cercle (symétrique)
+      c.lineWidth = 16; c.beginPath(); c.arc(128, 128, 104, 0, 2 * PI); c.stroke();
+      c.beginPath();
+      for (let i = 0; i < 10; i++) { const a = -PI / 2 + i * PI / 5, rr = i % 2 ? 36 : 88; c.lineTo(128 + Math.cos(a) * rr, 134 + Math.sin(a) * rr); }
+      c.closePath(); c.fill();
+    } else if (kind === 'unit') { // numéro d'unité au pochoir + matricule
+      const F = '"DejaVu Sans", "Liberation Sans", Arial, sans-serif';
+      c.font = `bold 132px ${F}`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      c.fillText('0', 84, 122); c.fillText('7', 174, 122);
+      c.fillRect(20, 136, 216, 7);
+      c.font = `bold 34px ${F}`; c.fillText('OPT-2', 128, 178);
+      // ponts du pochoir (haut et bas du 0, coude du 7)
+      c.globalCompositeOperation = 'destination-out';
+      c.fillRect(80, 0, 8, 46); c.fillRect(80, 92, 8, 40); c.fillRect(150, 44, 50, 7);
+    }
+    // usure de peinture
+    c.globalCompositeOperation = 'destination-out';
+    let r = 4242; const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
+    for (let i = 0; i < 140; i++) { c.globalAlpha = 0.3 + rnd() * 0.6; c.beginPath(); c.arc(rnd() * W, rnd() * H, 0.5 + rnd() * 1.8, 0, 2 * PI); c.fill(); }
+    const t = new T.CanvasTexture(cv);
+    t.flipY = false; t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4;
+    return (PATS[key] = t);
+  }
+  // panneau de décalcomanie épousant un profil (avec UV : u le long de theta, v le long de y)
+  function decalGeo(key, tab, th0, th1, y0, y1, off, nu = 10, nv = 8) {
+    const ck = 'optDecal' + key;
+    if (GC[ck]) return GC[ck];
+    const pos = [], uv = [], idx = [];
+    for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
+      const u = i / nu, v = j / nv;
+      pos.push(...SP(tab, lerp(th0, th1, u), lerp(y0, y1, v), off)); uv.push(u, v);
+    }
+    for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
+      const a = j * (nu + 1) + i, b = a + 1, c = a + nu + 2, d = a + nu + 1;
+      idx.push(a, c, b, a, d, c);
+    }
+    const geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
+    geo.setIndex(idx); geo.computeVertexNormals();
+    return (GC[ck] = geo);
+  }
+
+  /* ---------- matériau d'un emplacement de skin ----------
+     Motif triplanaire (repère local de la pièce, unités design) et lueur interne passent par
+     onBeforeCompile + uniforms : la lueur interne n'utilise pas .emissive (réservé au flash d'impact). */
+  function fxMat(ctx, spec) {
+    if (spec.glow != null) return ctx.glow(spec.glow, spec.i == null ? 3 : spec.i);
+    const p = Object.assign({}, spec), pat = p.pat, ps = p.ps || 0.05, rk = p.rk || 0, inner = p.inner, ii = p.ii || 0;
+    for (const k of ['pat', 'ps', 'rk', 'inner', 'ii']) delete p[k];
+    const m = ctx.mat(p);
+    if (ctx.override || (!pat && inner == null)) return m;
+    const key = 'optSkin' + (pat ? 'P' : '') + (inner != null ? 'I' : '');
+    m.customProgramCacheKey = () => key;
+    m.onBeforeCompile = sh => {
+      let v = sh.vertexShader, f = sh.fragmentShader;
+      if (pat) {
+        Object.assign(sh.uniforms, { uTri: { value: patTex(pat) }, uTriS: { value: ps }, uTriR: { value: rk } });
+        v = v.replace('#include <common>', '#include <common>\nvarying vec3 vTriP;\nvarying vec3 vTriN;')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTriP = position;\nvTriN = normal;');
+        f = f.replace('#include <common>', '#include <common>\nuniform sampler2D uTri;\nuniform float uTriS;\nuniform float uTriR;\nvarying vec3 vTriP;\nvarying vec3 vTriN;')
+          .replace('#include <map_fragment>', `#include <map_fragment>
+vec3 triW = pow(abs(normalize(vTriN)), vec3(4.0)); triW /= (triW.x + triW.y + triW.z + 1e-5);
+vec3 triC = texture2D(uTri, vTriP.zy * uTriS).rgb * triW.x + texture2D(uTri, vTriP.xz * uTriS).rgb * triW.y + texture2D(uTri, vTriP.xy * uTriS).rgb * triW.z;
+diffuseColor.rgb *= triC;`)
+          .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+roughnessFactor = clamp(roughnessFactor * (1.0 + uTriR * (0.25 - dot(triC, vec3(0.333)) * 4.0)), 0.04, 1.0);`);
+      }
+      if (inner != null) {
+        sh.uniforms.uInner = { value: new T.Color(inner).multiplyScalar(ii) };
+        f = f.replace('#include <common>', '#include <common>\nuniform vec3 uInner;')
+          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += uInner;');
+      }
+      sh.vertexShader = v; sh.fragmentShader = f;
+    };
+    return m;
+  }
+
   return function (ctx) {
     const { g, M, L } = ctx;
     const low = ctx.lod === 'low';
     const P = {};
     const add = (parent, geo, mat, p, r, s) => ctx.add(parent, geo, mat, { p, r, s });
 
-    /* ---------- matériaux ---------- */
-    const WH = M.shell;                       // coque blanche laquée
-    const BK = M.black;                       // noir laqué
-    const SB = ctx.mat({ color: 0x141519, roughness: 0.38, metalness: 0.2, clearcoat: 0.6, clearcoatRoughness: 0.25, envMapIntensity: 0.55 }); // noir satiné
-    const VI = M.visor;                       // visière
-    const GR = ctx.mat({ color: 0x4d5159, roughness: 0.3, metalness: 0.9, envMapIntensity: 0.9 }); // graphite (actionneurs)
-    const ST = M.steel, SE = M.seam, RU = ctx.mat({ color: 0x0e0f11, roughness: 0.62, metalness: 0.05, envMapIntensity: 0.3 });
-    const TX = ctx.mat({ color: 0x5b5e65, roughness: 0.45, metalness: 0.25 });   // lettrage
-    const LED = ctx.glow(0x46f0ff, 3.4);
+    /* ---------- matériaux (skin : SKINS[ctx.skin] ; ORIGINAL = matériaux d'origine) ---------- */
+    const SKN = SKINS[ctx.skin] || null;
+    const slot = {};
+    const pick = (k, dflt) => {
+      const sp = SKN && SKN[k];
+      return (slot[k] = sp == null ? dflt() : typeof sp === 'string' ? slot[sp] : fxMat(ctx, sp));
+    };
+    const WH = pick('shell', () => M.shell);  // coque blanche laquée
+    const BK = pick('black', () => M.black);  // noir laqué
+    const SB = pick('satin', () => ctx.mat({ color: 0x141519, roughness: 0.38, metalness: 0.2, clearcoat: 0.6, clearcoatRoughness: 0.25, envMapIntensity: 0.55 })); // noir satiné
+    const VI = pick('visor', () => M.visor);  // visière
+    const GR = pick('graph', () => ctx.mat({ color: 0x4d5159, roughness: 0.3, metalness: 0.9, envMapIntensity: 0.9 })); // graphite (actionneurs)
+    const ST = pick('steel', () => M.steel), SE = pick('seam', () => M.seam), RU = pick('rubber', () => ctx.mat({ color: 0x0e0f11, roughness: 0.62, metalness: 0.05, envMapIntensity: 0.3 }));
+    const TX = pick('text', () => ctx.mat({ color: 0x5b5e65, roughness: 0.45, metalness: 0.25 }));   // lettrage
+    const LED = pick('led', () => ctx.glow(0x46f0ff, 3.4));
     let LETTERS = null; // lettrage « TESLA » (retourné selon le sens du combattant)
-    const GM = ctx.mat({ color: 0x24272d, roughness: 0.28, metalness: 0.55, clearcoat: 0.8, clearcoatRoughness: 0.15, envMapIntensity: 0.7 }); // gunmetal (bassin)
-    const HM = ctx.mat({ color: 0x4a4e57, roughness: 0.32, metalness: 0.85, envMapIntensity: 0.95 }); // main
-    const FM = ctx.mat({ color: 0x6b7079, roughness: 0.3, metalness: 0.85, envMapIntensity: 1.0 }); // doigts
+    const GM = pick('gun', () => ctx.mat({ color: 0x24272d, roughness: 0.28, metalness: 0.55, clearcoat: 0.8, clearcoatRoughness: 0.15, envMapIntensity: 0.7 })); // gunmetal (bassin)
+    const HM = pick('palm', () => ctx.mat({ color: 0x4a4e57, roughness: 0.32, metalness: 0.85, envMapIntensity: 0.95 })); // main
+    const FM = pick('finger', () => ctx.mat({ color: 0x6b7079, roughness: 0.3, metalness: 0.85, envMapIntensity: 1.0 })); // doigts
+    // emplacements propres aux skins (ORIGINAL : mêmes objets matériau qu'avant → modèle identique)
+    const HELM = pick('helmet', () => BK);    // casque
+    const LT = pick('letters', () => TX);     // lettrage TESLA
+    const CT = pick('coreT', () => BK), CL = pick('coreL', () => SB), CS = pick('coreS', () => SE); // noyaux visibles entre panneaux
 
     // pièce latérale : le côté 'b' est un miroir en Z ; ly = facteur de longueur (os réel / os de conception)
     const sidePart = (sd, build, ly = 1) => { const part = ctx.group(), inner = ctx.group(); inner.scale.set(1, ly, sd < 0 ? -1 : 1); part.add(inner); build(inner); return part; };
@@ -317,6 +562,14 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       m.quaternion.setFromUnitVectors(YV, n); return m;
     };
     const full = (key, tab, y0, y1, nu, nv, o = {}) => patch(key, Object.assign({ tab, map: band(0, 2 * PI, y0, y1), closed: true, nu, nv, c: 0, t: 0 }, o));
+    // skins : liseré (lumineux / métallique) au fond d'un joint entre deux panneaux de membre ; ORIGINAL : rien
+    const SEAMS = !!(SKN && SKN.coreL);
+    // MILITAIRE : marquages au pochoir (n° d'unité sur la cuisse côté caméra, cocarde étoilée sur les bras)
+    const decMat = map => ctx.mat({ map, color: 0xd9d0a8, roughness: 0.82, metalness: 0, alphaTest: 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, envMapIntensity: 0.3 });
+    const DEC = ctx.skin === 'army' && !ctx.override ? { unit: decMat(decalTex('unit')), star: decMat(decalTex('roundel')) } : null;
+    const seam = (gr, key, tab, th0, th1, y0, y1, nu = 2, nv = 8) => {
+      if (SEAMS) add(gr, patch('optSeam' + key, { tab, map: band(th0 * D, th1 * D, y0, y1), nu, nv, off: -0.2, c: 0, t: 0 }), CL);
+    };
 
     /* =====================================================
        LOD bas (images rémanentes) : même silhouette, très peu de triangles
@@ -328,7 +581,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       add(torso, full('optLoPB', PB, -11, 9.5, 8, 3, { capB: true }), BK);
       P.torso = torso;
       P.neck = ctx.group(ctx.mesh(g.cyl(3.4, 3.8, 16, 8), BK, { p: [0, 8, 0] }));
-      P.head = ctx.group(ctx.mesh(full('optLoHD', HEAD, -11.8, 13.4, 12, 6, { capB: true }), BK, { s: 0.93 }));
+      P.head = ctx.group(ctx.mesh(full('optLoHD', HEAD, -11.8, 13.4, 12, 6, { capB: true }), HELM, { s: 0.93 }));
       for (const [sd, z] of [['f', 1], ['b', -1]]) {
         P[sd + 'ua'] = ctx.group(ctx.mesh(full('optLoUA', UA, 0, 33, 8, 2), WH, { s: [1, L.ua / 33, 1] }));
         P[sd + 'fa'] = ctx.group(ctx.mesh(full('optLoFA', FA, 0, 31, 8, 2), WH, { s: [1, L.fa / 31, 1] }));
@@ -367,7 +620,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       }
 
       // --- taille noire segmentée ---
-      add(torso, full('optWBcore', WB, 4, 31, 16, 4, { off: -1.4 }), SE);
+      add(torso, full('optWBcore', WB, 4, 31, 16, 4, { off: -1.4 }), CS);
       const bands = [[8.8, 13.6], [14.2, 19.0], [19.6, 24.6]];
       bands.forEach(([a, b], i) => add(torso, full('optWBband' + i, WB, a, b, 32, 3, { c: 0.55, t: 1.6 }), BK));
       // biellettes obliques de la taille (actionneurs de flexion latérale)
@@ -382,7 +635,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       for (let i = 0; i < 4; i++) add(torso, g.cbox(1.6, 1.4, 6.4, 0.4), SB, [-9.4, 10.5 + i * 5, 0]);
 
       // --- buste : noyau noir, empiècement noir du col, plastron blanc ---
-      add(torso, full('optTBcore', TB, 22.5, 62.4, 24, 8, { off: -0.7, capB: true }), BK);
+      add(torso, full('optTBcore', TB, 22.5, 62.4, 24, 8, { off: -0.7, capB: true }), CT);
       add(torso, patch('optYoke', { tab: TB, map: band(0, 2 * PI, YOKE, 62.4), closed: true, nu: 40, nv: 6, c: 0.4, t: 1.0 }), BK);
       // plastron (pectoraux) : bord supérieur sous le col, pli en V en bas
       add(torso, patch('optPec', { tab: TB, map: band(-100 * D, 100 * D, PEC_B, th => YOKE(th) - 0.65), nu: 32, nv: 7, c: 0.45, t: 1.3 }), WH);
@@ -411,7 +664,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       }
       // groupe à part (non fusionné) : retourné selon le sens du combattant pour rester lisible
       LETTERS = new T.Group(); LETTERS.userData.noMerge = true; torso.add(LETTERS);
-      add(LETTERS, fuse('optTESLA', strokes), TX);
+      add(LETTERS, fuse('optTESLA', strokes), LT);
 
       // --- structure d'épaule (pont vers les épaulières) ---
       for (const z of [1, -1]) {
@@ -450,17 +703,17 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       const h = ctx.group();
       const SEAM = th => -3.6 + 3.0 * Math.cos(th);   // joint casque / nuque (descend vers l'arrière)
       const dome = (y0, y1) => (u, v) => { const th = u * 2 * PI; return [th, lerp(fv(y0, th), y1, Math.sin(v * PI / 2))]; };
-      add(h, full('optHDcore', HEAD, -11.8, 13.4, 18, 9, { off: -0.6, capB: true, map: dome(-11.8, 13.4) }), SE);
+      add(h, full('optHDcore', HEAD, -11.8, 13.4, 18, 9, { off: -0.6, capB: true, map: dome(-11.8, 13.4) }), CS);
       // casque (crâne + nuque), séparé par un joint horizontal à l'arrière
-      add(h, full('optHDtop', HEAD, 0, 0, 40, 16, { c: 0.35, t: 0.9, map: dome(SEAM, 13.4) }), BK);
-      add(h, patch('optHDlow', { tab: HEAD, map: band(0, 2 * PI, -11.8, th => SEAM(th) - 0.6), closed: true, nu: 36, nv: 6, c: 0.35, t: 0.9, capB: true }), BK);
+      add(h, full('optHDtop', HEAD, 0, 0, 40, 16, { c: 0.35, t: 0.9, map: dome(SEAM, 13.4) }), HELM);
+      add(h, patch('optHDlow', { tab: HEAD, map: band(0, 2 * PI, -11.8, th => SEAM(th) - 0.6), closed: true, nu: 36, nv: 6, c: 0.35, t: 0.9, capB: true }), HELM);
       // visière (face) légèrement en relief
       add(h, patch('optFace', { tab: HEAD, map: shield(-10.8, 9.6, FACE_W), nu: 22, nv: 16, off: 0.4, c: 0.35, t: 1.0 }), VI);
       // filets LED le long des bords latéraux du visage
       for (const z of [1, -1]) {
         const pts = [];
         for (let i = 0; i <= 12; i++) { const y = lerp(-6.4, 8.6, i / 12); pts.push(SP(HEAD, z * (FACE_W(y) + 2.6 * D), y, 0.15)); }
-        add(h, g.tube(pts, 0.34, 24, 6), LED);
+        add(h, g.tube(pts, (SKN && SKN.ledR) || 0.34, 24, 6), LED);
       }
       h.scale.setScalar(0.93);
       P.head = ctx.group(h);
@@ -522,7 +775,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       P[sd + 'sc'] = sidePart(z, gr => {
         add(gr, patch('optCapIn', { tab: CAP, map: band(0, 2 * PI, -7.5, 1.6), closed: true, nu: 32, nv: 4, c: 0.35, t: 1.0, axis: 'z' }), SB, [0, 2.2, 0]);
         add(gr, patch('optCapOut', { tab: CAP, map: band(0, 2 * PI, 2.2, 8.2), closed: true, nu: 32, nv: 7, c: 0.35, t: 1.0, axis: 'z' }), BK, [0, 2.2, 0]);
-        add(gr, patch('optCapCore', { tab: CAP, map: band(0, 2 * PI, -7.5, 8.2), closed: true, nu: 12, nv: 4, off: -0.7, c: 0, t: 0, axis: 'z' }), SE, [0, 2.2, 0]);
+        add(gr, patch('optCapCore', { tab: CAP, map: band(0, 2 * PI, -7.5, 8.2), closed: true, nu: 12, nv: 4, off: -0.7, c: 0, t: 0, axis: 'z' }), CS, [0, 2.2, 0]);
         add(gr, g.ccyl(3.6, 0.8, 0.3, 24, 'z'), GR, [0, 1.8, 8.2]);
         add(gr, g.ccyl(1.7, 0.6, 0.2, 16, 'z'), ST, [0, 1.8, 8.7]);
       });
@@ -532,6 +785,8 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
         add(gr, g.ccyl(5.8, 11.2, 1, 24, 'z'), SB, [0, 1.2, 0]);
         add(gr, patch('optUAout', { tab: UA, map: band(-50 * D, 128 * D, 7, 28.6), nu: 18, nv: 8 }), WH);
         add(gr, patch('optUAin', { tab: UA, map: band(131 * D, 307 * D, 7, 28.6), nu: 18, nv: 8 }), WH);
+        seam(gr, 'UA1', UA, 126.5, 133.5, 7.6, 28); seam(gr, 'UA2', UA, 305.5, 311.5, 7.6, 28);
+        if (DEC) add(gr, decalGeo('star', UA, 55 * D, 125 * D, 10.8, 19.2, 0.05), DEC.star).userData.noShadow = true;
       }, L.ua / 33);
       P[sd + 'el'] = sidePart(z, gr => {
         add(gr, g.ccyl(4.9, 10.6, 0.9, 24, 'z'), SB);
@@ -544,6 +799,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
         add(gr, full('optFAcore', FA, 0, 31, 14, 4, { off: -0.9 }), SB);
         add(gr, patch('optFAtop', { tab: FA, map: band(-62 * D, 116 * D, 3.2, 25.2), nu: 16, nv: 8 }), WH);
         add(gr, patch('optFAbot', { tab: FA, map: band(119 * D, 295 * D, 3.2, 25.2), nu: 16, nv: 8 }), WH);
+        seam(gr, 'FA1', FA, 114.5, 120.5, 3.8, 24.6); seam(gr, 'FA2', FA, 293.5, 299.5, 3.8, 24.6);
         add(gr, full('optWrist', FA, 25.9, 30.6, 20, 2, { off: -0.25, c: 0.3, t: 0.8 }), BK);
         add(gr, g.ccyl(1.5, 5.6, 0.3, 12, 'z'), GR, [0, 30.6, 0]);
       }, L.fa / 31);
@@ -560,6 +816,9 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
         add(gr, full('optTHcore', TH, 0, 44, 16, 6, { off: -0.8 }), SB);
         add(gr, patch('optTHmain', { tab: TH, map: band(55 * D, 205 * D, th => 5.6 - 2.6 * Math.sin(th), th => 38.5 - 1.2 * Math.sin(th)), nu: 22, nv: 12, c: 0.5, t: 1.3 }), WH);
         add(gr, patch('optTHfront', { tab: TH, map: band(208 * D, 252 * D, 8, 36.6), nu: 6, nv: 10, c: 0.45, t: 1.3 }), WH);
+        seam(gr, 'TH1', TH, 203.5, 209.5, 8.6, 36, 2, 10);
+        seam(gr, 'TH2', TH, 50.5, 58, 4.4, 36.6, 2, 10); seam(gr, 'TH3', TH, 248.5, 255.5, 8.6, 36, 2, 10);
+        if (DEC && z > 0) add(gr, decalGeo('unit', TH, 60 * D, 130 * D, 11.5, 20, 0.05), DEC.unit).userData.noShadow = true;
       }, L.th / 44);
       // ---------- genou ----------
       P[sd + 'kn'] = sidePart(z, gr => {
@@ -576,6 +835,8 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
         add(gr, patch('optSHwhite', { tab: SH, map: band(92 * D, 268 * D, 3.6, SHIN_B), nu: 18, nv: 8, c: 0.45, t: 1.2 }), WH);
         add(gr, patch('optSHblack', { tab: SH, map: band(92 * D, 268 * D, th => SHIN_B(th) + 0.7, 40.6), nu: 18, nv: 6, c: 0.45, t: 1.2 }), BK);
         add(gr, patch('optSHcalf', { tab: SH, map: band(-86 * D, 88 * D, 3.2, 37.5), nu: 16, nv: 8, c: 0.45, t: 1.2 }), SB);
+        seam(gr, 'SH1', SH, 94, 266, th => SHIN_B(th) - 0.7, th => SHIN_B(th) + 1.4, 16, 1);
+        seam(gr, 'SH2', SH, 86.5, 93.5, 4.2, 36.8); seam(gr, 'SH3', SH, 266.5, 273.5, 4.2, 36.8);
         // vérins linéaires du mollet
         for (const zz of [2.5, -2.5]) {
           add(gr, g.ccyl(1.6, 22, 0.4, 12), BK, [6.3, 19, zz], [0, 0, 0.085]);
@@ -588,7 +849,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       }, L.sh / 44);
       // ---------- pied noir ----------
       P[sd + 'fo'] = sidePart(z, gr => {
-        add(gr, patch('optFTcore', { tab: FT, map: band(0, 2 * PI, -7.2, 19.2), closed: true, nu: 12, nv: 7, off: -0.7, c: 0, t: 0, axis: 'x' }), SE);
+        add(gr, patch('optFTcore', { tab: FT, map: band(0, 2 * PI, -7.2, 19.2), closed: true, nu: 12, nv: 7, off: -0.7, c: 0, t: 0, axis: 'x' }), CS);
         add(gr, patch('optFTrear', { tab: FT, map: band(0, 2 * PI, -7.3, 12.4), closed: true, nu: 24, nv: 10, c: 0.4, t: 1.0, axis: 'x' }), BK);
         add(gr, patch('optFTtoe', { tab: FT, map: band(0, 2 * PI, 13.0, 19.5), closed: true, nu: 22, nv: 4, c: 0.4, t: 1.0, axis: 'x' }), BK);
         // languette / cou-de-pied en relief + contrefort de talon
@@ -604,10 +865,13 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       });
     }
 
+    const PULSE = [...new Set([CT, CL, CS, LT])].filter(m => m !== LED && m.userData && m.userData.baseI != null); // liserés lumineux des skins
     const tick = ctx.override ? undefined : (t, state) => {
       if (LETTERS && state && state.face) LETTERS.scale.z = state.face;
+      if (DEC && state && state.face) { const tx = decalTex('unit', state.face < 0); if (DEC.unit.map !== tx) DEC.unit.map = tx; }
       const sup = state && (state.st === 'super' || state.st === 'special');
       LED.emissiveIntensity = LED.userData.baseI * ((sup ? 1.5 : 0.88) + 0.12 * Math.sin(t * 2.4));
+      for (const m of PULSE) m.emissiveIntensity = m.userData.baseI * ((sup ? 1.6 : 0.94) + 0.08 * Math.sin(t * 2.4 + 1.2));
     };
     return { parts: P, shZ: 22, hpZ: 10.6, tick };
   };
