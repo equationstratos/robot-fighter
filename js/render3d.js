@@ -227,7 +227,7 @@ const R3 = (function () {
     const light = (x, y, col, I) => { if (li >= fxLights.length) return; const l = fxLights[li++]; l.position.set(x, GROUND - y, 60); l.color.set(col); l.intensity = I; };
     for (const f of F.p) {
       const m = modelFor(f);
-      poseRobot(m.rb, f.pose, f.x, f.hipY, f.face, -0.42, F.frame / 60, f.st, f.z3 || 0);
+      poseRobot(m.rb, f.pose, f.x + (f.vdx || 0) * f.face, f.hipY, f.face, f.vYaw == null ? -0.42 : f.vYaw, F.frame / 60, f.st, f.z3 || 0);
       setFlash(m.rb, f.flash > 0 ? 0.9 : (f.meter >= 100 && F.frame % 20 < 10 && f.st !== 'super') ? 0.12 : 0);
       m.ghosts.forEach((g, i) => {
         const gh = f.ghosts[f.ghosts.length - 1 - i];

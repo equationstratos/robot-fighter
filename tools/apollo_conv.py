@@ -27,6 +27,9 @@ ap.add_argument('--split', default='', help='fichier JSON de découpage en sous-
 ap.add_argument('--cache', default='')
 ap.add_argument('--cadn', type=int, default=1)
 ap.add_argument('--exact', type=int, default=1)
+ap.add_argument('--id', default='apollo', help='identifiant RK_MESH (autre robot : --id asimov, budgets via BUDGET=fichier.json)')
+ap.add_argument('--src', default='MuJoCo Menagerie / apptronik_apollo (Apptronik)')
+ap.add_argument('--license', default='Apache-2.0, © Apptronik')
 a = ap.parse_args()
 
 # (motif, budget haut, budget bas, voxel cm)
@@ -388,14 +391,14 @@ for ji in range(m.njnt):
         ax = d.xaxis[ji]
         joints[m.joint(ji).name] = {'body': m.body(m.jnt_bodyid[ji]).name, 'p': [round(float(x), 3) for x in C.to_game(d.xanchor[ji])],
                                     'axis': [round(float(ax[0]), 4), round(float(ax[2]), 4), round(float(-ax[1]), 4)]}
-src = 'MuJoCo Menagerie / apptronik_apollo (Apptronik)'; lic = 'Apache-2.0, © Apptronik'
-data = {'id': 'apollo', 'src': src, 'license': lic,
+src = a.src; lic = a.license
+data = {'id': a.id, 'src': src, 'license': lic,
         'unit': 'cm ; axes du jeu : X avant, Y haut, Z côté droit du robot ; pose de repos',
         'tri': tot_hi, 'triLow': tot_lo, 'bodies': bodies, 'joints': joints, 'geoms': out_geoms}
 js = ("'use strict';\n"
-      f"// Maillages officiels « apollo » — source : {src} — licence : {lic}\n"
+      f"// Maillages officiels « {a.id} » — source : {src} — licence : {lic}\n"
       "// Générés depuis la CAO officielle : enveloppe extérieure (champ de distance), décimation quadrique, normales\n"
       "// transférées depuis la surface détaillée (champ 'n', int8) — ne pas modifier à la main.\n"
-      "(window.RK_MESH = window.RK_MESH || {})[\"apollo\"] = " + json.dumps(data, separators=(',', ':'), ensure_ascii=False) + ';\n')
+      f"(window.RK_MESH = window.RK_MESH || {{}})[\"{a.id}\"] = " + json.dumps(data, separators=(',', ':'), ensure_ascii=False) + ';\n')
 open(a.out, 'w', encoding='utf-8').write(js)
 print(json.dumps({'geoms': len(out_geoms), 'tri': tot_hi, 'triLow': tot_lo, 'bytes': len(js), 'sec': round(time.time() - t0, 1)}))

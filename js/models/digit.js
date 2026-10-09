@@ -217,6 +217,235 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
   const HS = rsec(HEAD);
   const Y_HEADSPLIT = -1.6;
 
+  /* =========================================================
+     SKINS : palette / finitions par ctx.skin ('classic' = matériaux d'origine, modèle strictement identique)
+     Emplacements de matériau :
+       body (coques du buste) · black (noir satiné : épaules, bras, pinces…) · graph (graphite : genoux, ressorts)
+       alu (alu des jambes, tiges) · light (actionneurs gris clair des bras) · white (anneau du logo)
+       navy (cou lidar) · blue (bague du genou) · eyebg · visor · rubber · seam
+       led / ledh / eye / screen (lumières : tableau LED, halo, yeux, icônes)
+       core (noyau visible dans les joints du buste) · pelvis (bassin) · cowl (capot de cuisse) · head (casque-capteur)
+       band (bandeau de la tête) · ring (bagues des bras) · dring (liseré des épaules) · strip (bande de cuisse)
+       refl / marker (bandes rétro-réfléchissantes, sphères de capture de mouvement : géométrie propre au skin)
+     Valeur : paramètres de ctx.mat (+ pat/ps/rk : motif triplanaire, inner/ii : lueur interne),
+              { glow, i } pour un matériau émissif, ou le nom d'un emplacement déjà défini.
+     geo : géométrie propre au skin — 'refl' (bandes réfléchissantes), 'proto' (lidar + marqueurs), 'lines' (filets lumineux)
+     ========================================================= */
+  const SKINS = {
+    // CASSIE : hommage à la Cassie d'Agility — bleu nuit métallisé verni, alu poli miroir, LED bleues
+    cassie: {
+      body: { color: 0x2a5cd6, roughness: 0.28, metalness: 0.32, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.9 },   // bleu cobalt vernis (le bleu nuit se noyait dans les arènes sombres)
+      black: { color: 0x0e1016, roughness: 0.32, metalness: 0.35, clearcoat: 0.7, clearcoatRoughness: 0.2, envMapIntensity: 0.7 },
+      graph: { color: 0x2c3442, roughness: 0.28, metalness: 0.85, envMapIntensity: 0.9 },
+      alu: { color: 0xd3d8df, roughness: 0.2, metalness: 0.95, envMapIntensity: 1.1 },
+      light: { color: 0xc4cad3, roughness: 0.24, metalness: 0.9, envMapIntensity: 1.0 },
+      white: 'alu',
+      led: { glow: 0x4a9dff, i: 3.4 }, ledh: { glow: 0x1d4fa8, i: 0.7 }, eye: { glow: 0xdcecff, i: 2.6 }, screen: { glow: 0x6ab4ff, i: 1.0 },
+      core: 'black', pelvis: { color: 0x14161b, roughness: 0.26, metalness: 0.7, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 0.85 },
+      cowl: 'body', head: 'alu', blue: { color: 0x4a9dff, roughness: 0.25, metalness: 0.75, envMapIntensity: 0.9 }
+    },
+    // PROTOTYPE : Digit des débuts (v1-v2) — apprêt blanc mat, gris d'atelier, tête-boîtier sombre surmontée
+    // d'un lidar rotatif, sphères de capture de mouvement, voyants ambre
+    proto: {
+      geo: 'proto',
+      body: { color: 0xdcdee0, roughness: 0.58, metalness: 0.02, clearcoat: 0.15, clearcoatRoughness: 0.5, envMapIntensity: 0.45 },
+      black: { color: 0x1b1c1f, roughness: 0.55, metalness: 0.12, envMapIntensity: 0.45 },
+      graph: { color: 0x45484e, roughness: 0.4, metalness: 0.7, envMapIntensity: 0.7 },
+      light: { color: 0x9da2a8, roughness: 0.45, metalness: 0.5, envMapIntensity: 0.6 },
+      white: 'light', navy: 'graph',
+      led: { glow: 0xffb020, i: 3.2 }, ledh: { glow: 0x9a5a00, i: 0.7 }, eye: { glow: 0xffc860, i: 2.4 }, screen: { glow: 0xffb020, i: 1.0 },
+      pelvis: { color: 0x7e838a, roughness: 0.5, metalness: 0.35, clearcoat: 0.2, clearcoatRoughness: 0.4, envMapIntensity: 0.55 },
+      cowl: 'pelvis', head: { color: 0x34373c, roughness: 0.45, metalness: 0.3, clearcoat: 0.3, clearcoatRoughness: 0.3, envMapIntensity: 0.6 },
+      blue: { color: 0xffa21a, roughness: 0.35, metalness: 0.6, envMapIntensity: 0.7 },
+      marker: { color: 0xf2f4f6, roughness: 0.55, metalness: 0, envMapIntensity: 0.4, inner: 0xffffff, ii: 0.32 }
+    },
+    // SÉCURITÉ : cariste d'entrepôt — jaune fluo haute visibilité, capot et casque orange sécurité, bassin à
+    // chevrons de danger, bandes rétro-réfléchissantes micro-prismatiques
+    secu: {
+      geo: 'refl',
+      body: { color: 0xc8f01a, roughness: 0.42, metalness: 0.02, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 0.4, inner: 0x7a9a00, ii: 0.1 },
+      black: { color: 0x17181b, roughness: 0.45, metalness: 0.15, clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.6 },
+      led: { glow: 0xff7a00, i: 3.2 }, ledh: { glow: 0xb04400, i: 0.7 }, screen: { glow: 0xff8a20, i: 1.0 },
+      pelvis: { color: 0xffffff, pat: 'hazard', ps: 1 / 18, roughness: 0.42, metalness: 0.05, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 0.45 },
+      cowl: { color: 0xff5e00, roughness: 0.38, metalness: 0.05, clearcoat: 0.7, clearcoatRoughness: 0.15, envMapIntensity: 0.45, inner: 0x802000, ii: 0.08 },
+      head: 'cowl', blue: 'cowl',
+      refl: { color: 0xe4e8ee, pat: 'prism', ps: 1 / 7, rk: 0.25, roughness: 0.3, metalness: 0.5, envMapIntensity: 1.0, inner: 0xe8eeff, ii: 0.3 }
+    },
+    // NOCTURNE : noir mat furtif, filets lumineux cyan dans les joints, lidar et bagues allumés
+    nocturne: {
+      geo: 'lines',
+      body: { color: 0x151619, roughness: 0.5, metalness: 0.25, clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.6 },
+      black: { color: 0x0c0d0f, roughness: 0.4, metalness: 0.3, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.6 },
+      graph: { color: 0x1d1f23, roughness: 0.32, metalness: 0.8, envMapIntensity: 0.8 },
+      alu: { color: 0x3b3e45, roughness: 0.34, metalness: 0.88, envMapIntensity: 0.95 },
+      light: { color: 0x2b2d32, roughness: 0.4, metalness: 0.7, envMapIntensity: 0.75 },
+      white: { glow: 0x2fe6ff, i: 2.6 }, navy: { glow: 0x2fe6ff, i: 1.1 }, blue: { glow: 0x2fe6ff, i: 2.6 },
+      led: { glow: 0x2fe6ff, i: 3.2 }, ledh: { glow: 0x0a6f80, i: 0.7 }, eye: { glow: 0xa8f6ff, i: 2.8 }, screen: { glow: 0x2fe6ff, i: 1.0 },
+      core: { glow: 0x2fe6ff, i: 2.4 }, pelvis: 'black', cowl: 'body',
+      head: { color: 0x16171a, roughness: 0.25, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 0.8 },
+      ring: 'blue', dring: 'blue', strip: 'blue', fin: 'blue'
+    },
+    // AUTRUCHE : plumage brun-fauve (motif de plumes en écailles), pattes rose chair à écailles, crème et bronze
+    autruche: {
+      body: { color: 0xffffff, pat: 'feather', ps: 1 / 30, roughness: 0.62, metalness: 0, clearcoat: 0.2, clearcoatRoughness: 0.45, envMapIntensity: 0.4 },
+      black: { color: 0x2a1d13, roughness: 0.45, metalness: 0.15, clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.55 },
+      graph: { color: 0x6a4a30, roughness: 0.35, metalness: 0.7, envMapIntensity: 0.75 },
+      alu: { color: 0xf0a49a, pat: 'scales', ps: 1 / 9, rk: 0.35, roughness: 0.5, metalness: 0.05, clearcoat: 0.35, clearcoatRoughness: 0.3, envMapIntensity: 0.5 },   // tibias rose vif (autruche mâle)
+      light: { color: 0xf1eadc, roughness: 0.42, metalness: 0.05, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 0.5 },
+      white: 'light', navy: { color: 0x8a6440, roughness: 0.3, metalness: 0.75, envMapIntensity: 0.85 },
+      led: { glow: 0xffa53a, i: 3.2 }, ledh: { glow: 0x9a5200, i: 0.7 }, eye: { glow: 0xfff0d6, i: 2.6 }, screen: { glow: 0xffa53a, i: 1.0 },
+      pelvis: { color: 0x3b2a1c, roughness: 0.48, metalness: 0.15, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.55 },
+      cowl: 'pelvis', head: 'light', blue: { color: 0xc98a45, roughness: 0.3, metalness: 0.85, envMapIntensity: 0.9 }
+    },
+    // URBAIN : camouflage numérique gris (pixels), gunmetal, voyants rouges
+    urbain: {
+      body: { color: 0xffffff, pat: 'ucamo', ps: 1 / 26, roughness: 0.58, metalness: 0.1, clearcoat: 0.25, clearcoatRoughness: 0.4, envMapIntensity: 0.5 },
+      black: { color: 0x1d1f22, roughness: 0.45, metalness: 0.25, clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.6 },
+      graph: { color: 0x34363b, roughness: 0.36, metalness: 0.75, envMapIntensity: 0.75 },
+      alu: { color: 0x75787e, roughness: 0.4, metalness: 0.78, envMapIntensity: 0.85 },
+      light: { color: 0x9a9da2, roughness: 0.45, metalness: 0.4, clearcoat: 0.3, clearcoatRoughness: 0.3, envMapIntensity: 0.6 },
+      white: { color: 0xff3b30, roughness: 0.35, metalness: 0.2 }, navy: 'graph',
+      led: { glow: 0xff3b30, i: 3.2 }, ledh: { glow: 0x9a1810, i: 0.7 }, screen: { glow: 0xff4a3a, i: 1.0 },
+      pelvis: { color: 0x26282c, roughness: 0.45, metalness: 0.35, clearcoat: 0.3, clearcoatRoughness: 0.3, envMapIntensity: 0.6 },
+      cowl: 'body', head: { color: 0xb3b6ba, roughness: 0.45, metalness: 0.15, clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 0.55 },
+      blue: { color: 0xff3b30, roughness: 0.3, metalness: 0.6, envMapIntensity: 0.7 },
+      ring: 'blue', strip: 'blue'   // bagues des bras et bandes de cuisse rouges : repères lisibles à taille de jeu
+    }
+  };
+
+  /* ---------- motifs procéduraux (dessinés une fois, en cache module) ---------- */
+  const PATS = {};
+  function patTex(kind) {
+    if (PATS[kind]) return PATS[kind];
+    const n = 256, cv = document.createElement('canvas'); cv.width = cv.height = n;
+    const c = cv.getContext('2d');
+    let r = 4711; const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
+    let srgb = true;
+    // dessin raccordable : répète la forme aux 9 décalages de la tuile
+    const wrap = fn => { for (const oy of [-n, 0, n]) for (const ox of [-n, 0, n]) { c.save(); c.translate(ox, oy); fn(); c.restore(); } };
+    if (kind === 'hazard') {                     // chevrons de danger jaune / noir à 45°
+      const img = c.createImageData(n, n), d = img.data;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const i = (y * n + x) * 4, k = ((x + y) % 128) / 128, on = k < 0.5, e = Math.min(Math.abs(k - 0.5), k, 1 - k) * 128;
+        const s = e < 1.5 ? 0.5 + e / 3 : 1, gr = 0.95 + 0.05 * rnd();
+        const col = on ? [250, 196, 0] : [22, 22, 24];
+        d[i] = col[0] * gr * s + (1 - s) * 120; d[i + 1] = col[1] * gr * s + (1 - s) * 100; d[i + 2] = col[2] * gr * s + (1 - s) * 20; d[i + 3] = 255;
+      }
+      c.putImageData(img, 0, 0);
+    } else if (kind === 'prism') {               // ruban rétro-réfléchissant : alvéoles micro-prismatiques (luminance)
+      srgb = false;
+      const img = c.createImageData(n, n), d = img.data;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const a = ((x + y) % 32 + 32) % 32, b = ((x - y) % 32 + 32) % 32, e = Math.min(a, 32 - a, b, 32 - b);
+        const v = (e < 1.2 ? 0.55 : 0.94 + 0.06 * Math.sin((a + b) * 0.2)) * 255, i = (y * n + x) * 4;
+        d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+      }
+      c.putImageData(img, 0, 0);
+    } else if (kind === 'feather') {             // plumage : plumes effilées en désordre (attache en haut, pointe crème effilochée en bas)
+      c.fillStyle = '#4a321d'; c.fillRect(0, 0, n, n);
+      const F = [];
+      for (let j = 0; j < 12; j++) for (let i = 0; i < 9; i++) F.push({ x: (i + 0.5 + (rnd() - 0.5) * 0.9) * n / 9, y: (j + (rnd() - 0.5) * 0.8) * n / 12, l: 30 + rnd() * 14, w: 12 + rnd() * 5, a: (rnd() - 0.5) * 0.5, t: rnd() });
+      F.sort((p, q) => q.y - p.y);                 // du bas vers le haut : la pointe de chaque plume recouvre la base de la suivante
+      for (const f of F) {
+        const base = f.t < 0.3 ? [112, 78, 46] : f.t < 0.7 ? [146, 106, 64] : [172, 128, 80], mid = f.t < 0.3 ? [190, 146, 96] : [214, 172, 118];
+        wrap(() => {
+          c.save(); c.translate(f.x, f.y); c.rotate(f.a);
+          const L = f.l, W = f.w;
+          const gr = c.createLinearGradient(0, -L * 0.15, 0, L);
+          gr.addColorStop(0, `rgb(${base})`); gr.addColorStop(0.55, `rgb(${base})`); gr.addColorStop(0.8, `rgb(${mid})`); gr.addColorStop(1, '#efe2c6');
+          c.fillStyle = gr; c.beginPath();
+          c.moveTo(-W * 0.18, -L * 0.15);
+          c.bezierCurveTo(-W * 0.62, L * 0.25, -W * 0.55, L * 0.75, -W * 0.08, L);
+          c.lineTo(W * 0.08, L);
+          c.bezierCurveTo(W * 0.55, L * 0.75, W * 0.62, L * 0.25, W * 0.18, -L * 0.15);
+          c.closePath(); c.fill();
+          // barbes (stries obliques fines) + rachis clair
+          c.lineWidth = 0.7;
+          for (let k = 0; k < 11; k++) {
+            const yy = L * (0.05 + k * 0.085), ww = W * 0.5 * Math.sin(Math.min(1, (yy + L * 0.15) / (L * 1.1)) * PI) + 0.5;
+            c.strokeStyle = k % 2 ? 'rgba(30,18,8,0.35)' : 'rgba(255,240,215,0.18)';
+            c.beginPath(); c.moveTo(0, yy); c.lineTo(-ww, yy + L * 0.12); c.moveTo(0, yy); c.lineTo(ww, yy + L * 0.12); c.stroke();
+          }
+          c.strokeStyle = 'rgba(245,230,200,0.5)'; c.lineWidth = 0.9;
+          c.beginPath(); c.moveTo(0, -L * 0.1); c.quadraticCurveTo(W * 0.06, L * 0.5, 0, L * 0.94); c.stroke();
+          // pointe effilochée
+          c.strokeStyle = 'rgba(240,226,196,0.75)'; c.lineWidth = 0.8;
+          for (let k = -3; k <= 3; k++) { c.beginPath(); c.moveTo(k * W * 0.06, L * 0.9); c.lineTo(k * W * 0.11, L + 3 + Math.abs(k) * -0.6 + rnd() * 2); c.stroke(); }
+          c.restore();
+        });
+      }
+    } else if (kind === 'scales') {              // écailles des pattes d'autruche (luminance : sillons sombres, bombé clair)
+      srgb = false;
+      c.fillStyle = '#d0d0d0'; c.fillRect(0, 0, n, n);
+      const rows = 8, H = n / rows;
+      for (let j = 0; j < rows; j++) {
+        const W = n / (j % 2 ? 4 : 5);
+        for (let i = 0; i < n / W; i++) {
+          const x0 = i * W + (j % 3) * 9, y0 = j * H;
+          wrap(() => {
+            const gr = c.createRadialGradient(x0 + W * 0.45, y0 + H * 0.35, 2, x0 + W * 0.5, y0 + H * 0.5, W * 0.62);
+            gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.7, '#e2e2e2'); gr.addColorStop(1, '#a8a8a8');
+            c.fillStyle = gr; c.beginPath();
+            if (c.roundRect) c.roundRect(x0 + 1.5, y0 + 1.5, W - 3, H - 3, 9); else c.rect(x0 + 1.5, y0 + 1.5, W - 3, H - 3);
+            c.fill();
+          });
+        }
+      }
+    } else if (kind === 'ucamo') {               // camouflage numérique urbain (pixels de 8 px, bruit raccordable)
+      const G = 32, cell = n / G;
+      const mk = Gs => { const t = Array.from({ length: Gs * Gs }, rnd); return (x, y) => {
+        x *= Gs; y *= Gs; const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+        const v = (a, b) => t[(((b % Gs) + Gs) % Gs) * Gs + (((a % Gs) + Gs) % Gs)];
+        return lerp(lerp(v(xi, yi), v(xi + 1, yi), sx), lerp(v(xi, yi + 1), v(xi + 1, yi + 1), sx), sy);
+      }; };
+      const A = mk(4), B = mk(8), E = mk(16), C = mk(6);
+      const COL = ['#a4a7ab', '#686b70', '#3c3f44', '#1b1d20'];   // contraste fort, moyenne sombre (≠ PROTOTYPE blanc)
+      for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
+        const u = (x + 0.5) / G, v = (y + 0.5) / G, f = A(u, v) * 0.55 + B(u, v) * 0.3 + E(u, v) * 0.15, h = C(u, v);
+        const k = f < 0.42 ? 0 : f < 0.52 ? 1 : f < 0.6 ? 2 : 3;
+        c.fillStyle = COL[h > 0.62 && k === 1 ? 3 : k]; c.fillRect(x * cell, y * cell, cell, cell);
+      }
+    }
+    const t = new T.CanvasTexture(cv);
+    t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 4;
+    if (srgb) t.colorSpace = T.SRGBColorSpace;
+    return (PATS[kind] = t);
+  }
+  /* ---------- matériau d'un emplacement de skin ----------
+     Motif triplanaire (repère local de la pièce, unités design) : teinte × motif, rugosité plus forte dans les creux ;
+     lueur interne par uniform (n'utilise pas .emissive, réservé au flash d'impact). */
+  function fxMat(ctx, spec) {
+    if (spec.glow != null) return ctx.glow(spec.glow, spec.i == null ? 3 : spec.i);
+    const p = Object.assign({}, spec), pat = p.pat, ps = p.ps || 0.05, rk = p.rk || 0, inner = p.inner, ii = p.ii || 0;
+    for (const k of ['pat', 'ps', 'rk', 'inner', 'ii']) delete p[k];
+    const m = ctx.mat(p);
+    if (ctx.override || (!pat && inner == null)) return m;
+    const key = 'dgSkin' + (pat ? 'P' : '') + (inner != null ? 'I' : '');
+    m.customProgramCacheKey = () => key;
+    m.onBeforeCompile = sh => {
+      let v = sh.vertexShader, f = sh.fragmentShader;
+      if (pat) {
+        Object.assign(sh.uniforms, { uTri: { value: patTex(pat) }, uTriS: { value: ps }, uTriR: { value: rk } });
+        v = v.replace('#include <common>', '#include <common>\nvarying vec3 vTriP;\nvarying vec3 vTriN;')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTriP = position;\nvTriN = normal;');
+        f = f.replace('#include <common>', '#include <common>\nuniform sampler2D uTri;\nuniform float uTriS;\nuniform float uTriR;\nvarying vec3 vTriP;\nvarying vec3 vTriN;')
+          .replace('#include <map_fragment>', `#include <map_fragment>
+vec3 triW = pow(abs(normalize(vTriN)), vec3(4.0)); triW /= (triW.x + triW.y + triW.z + 1e-5);
+vec3 triC = texture2D(uTri, vTriP.zy * uTriS).rgb * triW.x + texture2D(uTri, vTriP.xz * uTriS).rgb * triW.y + texture2D(uTri, vTriP.xy * uTriS).rgb * triW.z;
+diffuseColor.rgb *= triC;`)
+          .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333))), 0.04, 1.0);`);
+      }
+      if (inner != null) {
+        sh.uniforms.uInner = { value: new T.Color(inner).multiplyScalar(ii) };
+        f = f.replace('#include <common>', '#include <common>\nuniform vec3 uInner;')
+          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += uInner;');
+      }
+      sh.vertexShader = v; sh.fragmentShader = f;
+    };
+    return m;
+  }
+
   return function (ctx) {
     const { g, M, L, ch } = ctx;
     const low = ctx.lod === 'low';
@@ -226,22 +455,31 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
     if (!R) return RK.models.default(ctx);
     const B = R.bodies;
 
-    /* ---------- matériaux ---------- */
-    const TEAL = ctx.mat({ color: ch.body, roughness: 0.46, metalness: 0.32, clearcoat: 0.3, clearcoatRoughness: 0.4, envMapIntensity: 0.7 });   // sarcelle satinée à paillettes
-    const BK = ctx.mat({ color: 0x131417, roughness: 0.4, metalness: 0.15, clearcoat: 0.4, clearcoatRoughness: 0.32, envMapIntensity: 0.65 });   // noir satiné
-    const GR = ctx.mat({ color: 0x2a2d33, roughness: 0.38, metalness: 0.7, envMapIntensity: 0.7 });
-    const SIL = ctx.mat({ color: 0xa6aab0, roughness: 0.5, metalness: 0.66, envMapIntensity: 0.85 });   // alu microbillé (mat)
-    const LG = ctx.mat({ color: 0xcdd0d3, roughness: 0.36, metalness: 0.3, clearcoat: 0.35, clearcoatRoughness: 0.25, envMapIntensity: 0.6 });
-    const WH = ctx.mat({ color: 0xf2f3f4, roughness: 0.3, metalness: 0.02, clearcoat: 0.9, clearcoatRoughness: 0.12, envMapIntensity: 0.5 });
-    const NV = ctx.mat({ color: 0x0d1a33, roughness: 0.1, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.1 });
-    const BLU = ctx.mat({ color: 0x2b7ad6, roughness: 0.3, metalness: 0.7, envMapIntensity: 0.8 });
-    const EYEBG = ctx.mat({ color: 0x15171b, roughness: 0.12, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.9 });
-    const GL = M.visor, RU = M.rubber, SE = M.seam;
-    const LEDH = ctx.glow(0x1d9e46, 0.7);
-    const LEDG = ctx.glow(0x3dff74, 3.2), EYE = ctx.glow(0xf2f7ff, 2.6), SCR = ctx.glow(0x2a6cff, 0.9);
-    const MAT = { _dummy: SIL, sil: SIL, blk: BK, gr: GR, ru: RU, se: SE };
+    /* ---------- matériaux (skin : SKINS[ctx.skin] ; 'classic' = mêmes matériaux qu'avant → modèle identique) ---------- */
+    const SKN = SKINS[ctx.skin] || null, SGEO = (SKN && !low && !ctx.override && SKN.geo) || null;
+    const slot = {};
+    const pick = (k, dflt) => { const sp = SKN && SKN[k]; return (slot[k] = sp == null ? dflt() : typeof sp === 'string' ? slot[sp] : fxMat(ctx, sp)); };
+    const TEAL = pick('body', () => ctx.mat({ color: ch.body, roughness: 0.46, metalness: 0.32, clearcoat: 0.3, clearcoatRoughness: 0.4, envMapIntensity: 0.7 }));   // sarcelle satinée à paillettes
+    const BK = pick('black', () => ctx.mat({ color: 0x131417, roughness: 0.4, metalness: 0.15, clearcoat: 0.4, clearcoatRoughness: 0.32, envMapIntensity: 0.65 }));   // noir satiné
+    const GR = pick('graph', () => ctx.mat({ color: 0x2a2d33, roughness: 0.38, metalness: 0.7, envMapIntensity: 0.7 }));
+    const SIL = pick('alu', () => ctx.mat({ color: 0xa6aab0, roughness: 0.5, metalness: 0.66, envMapIntensity: 0.85 }));   // alu microbillé (mat)
+    const LG = pick('light', () => ctx.mat({ color: 0xcdd0d3, roughness: 0.36, metalness: 0.3, clearcoat: 0.35, clearcoatRoughness: 0.25, envMapIntensity: 0.6 }));
+    const WH = pick('white', () => ctx.mat({ color: 0xf2f3f4, roughness: 0.3, metalness: 0.02, clearcoat: 0.9, clearcoatRoughness: 0.12, envMapIntensity: 0.5 }));
+    const NV = pick('navy', () => ctx.mat({ color: 0x0d1a33, roughness: 0.1, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.1 }));
+    const BLU = pick('blue', () => ctx.mat({ color: 0x2b7ad6, roughness: 0.3, metalness: 0.7, envMapIntensity: 0.8 }));
+    const EYEBG = pick('eyebg', () => ctx.mat({ color: 0x15171b, roughness: 0.12, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.9 }));
+    const GL = pick('visor', () => M.visor), RU = pick('rubber', () => M.rubber), SE = pick('seam', () => M.seam);
+    const LEDH = pick('ledh', () => ctx.glow(0x1d9e46, 0.7));
+    const LEDG = pick('led', () => ctx.glow(0x3dff74, 3.2)), EYE = pick('eye', () => ctx.glow(0xf2f7ff, 2.6)), SCR = pick('screen', () => ctx.glow(0x2a6cff, 0.9));
+    // emplacements propres aux skins (classic : le matériau d'origine de la pièce, aucun nouveau matériau)
+    const CORE = pick('core', () => SE), PELV = pick('pelvis', () => BK), COWL = pick('cowl', () => BK), HEADM = pick('head', () => WH);
+    const BAND = pick('band', () => BK), RING = pick('ring', () => GR), DRING = pick('dring', () => SE), STRIP = pick('strip', () => RU), FIN = pick('fin', () => SE);
+    const REFL = SGEO === 'refl' ? pick('refl', () => SIL) : null, MARK = SGEO === 'proto' ? pick('marker', () => WH) : null;
+    const MAT = { _dummy: SIL, sil: SIL, blk: COWL, gr: GR, ru: RU, se: SE };
 
     const sidePart = (sd, build) => { const part = ctx.group(), inner = ctx.group(); inner.scale.set(1, 1, sd < 0 ? -1 : 1); part.add(inner); build(inner); return part; };
+    // PROTOTYPE : sphères rétro-réfléchissantes de capture de mouvement (fusionnées par pièce)
+    const marks = (parent, key, pts) => { if (MARK) add(parent, fuse('dgSkMk' + key, pts.map(p => [g.sphere(0.8, 8, 5), p])), MARK); };
 
     /* ---------- jambes réelles (Cassie) ---------- */
     const legCls = (gm, x, y, z) => {
@@ -301,7 +539,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
         const th = sidePart(z, gr => {
           const a = [-16.6 * LEG_S[0], 15.5], b = [-6.4 * LEG_S[0], 36.5], ln = Math.hypot(b[0] - a[0], b[1] - a[1]), ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
           const strip = ctx.group(); strip.position.set((a[0] + b[0]) / 2 - 0.7, (a[1] + b[1]) / 2, 1.4 * LEG_S[2]); strip.rotation.z = -ang; gr.add(strip);
-          add(strip, g.rbox(1.6, ln, 4.4, 0.6, 2), RU);
+          add(strip, g.rbox(1.6, ln, 4.4, 0.6, 2), STRIP);
           add(strip, fuse('dgRibs' + ln.toFixed(1), Array.from({ length: 12 }, (_, i) => [g.box(0.8, 0.7, 3.8), [-0.8, (i - 5.5) * ln / 13, 0]])), BK);
         });
         P[sd + 'th'].add(th);
@@ -322,6 +560,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
           add(gr, fuse('dgKneeBolts', Array.from({ length: 6 }, (_, i) => { const a = (i / 6 + 1 / 12) * 2 * PI; return [g.cyl(0.36, 0.36, 0.4, 6, 'z'), [Math.cos(a) * 3.4, Math.sin(a) * 3.4, 0]]; })), GR, [0, 0, 4.45 * LEG_S[2]]);
           add(gr, g.torus(1.75, 0.3, 20, 4, PI * 2, 'z'), BLU, [0, 0, 4.4 * LEG_S[2]]);
           add(gr, g.ccyl(1.3, 1.0, 0.25, 14, 'z'), GR, [0, 0, 4.5 * LEG_S[2]]);
+          marks(gr, 'Kn', [[0, 0, 4.5 * LEG_S[2] + 1.2]]);
         }
       });
       // pied Digit : semelle plate
@@ -358,15 +597,15 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
       const ysPel = ysamp([[TOR.yB - CL, TOR.yB, 2, 'l'], [TOR.yB, TOR.yB + TOR.rBx, 6, 'bot'], [TOR.yB + TOR.rBx, Y_SPLIT - 0.6, 1, 'l']]);
       if (low) {
         add(torso, shell('dgTorLo', { sec: TS, u0: 0, u1: 1, nu: 16, ys: ysamp([[Y_SPLIT, 55, 2, 'l'], [55, TOR.yT, 3, 'top'], [TOR.yT, TOR.yT + CL, 1, 'l']]), yLo: Y_SPLIT, c: 0, t: 0 }), TEAL);
-        add(torso, shell('dgPelLo', { sec: TS, u0: 0, u1: 1, nu: 16, ys: ysamp([[TOR.yB - CL, TOR.yB, 1, 'l'], [TOR.yB, TOR.yB + TOR.rBx, 3, 'bot'], [TOR.yB + TOR.rBx, Y_SPLIT, 1, 'l']]), c: 0, t: 0 }), BK);
+        add(torso, shell('dgPelLo', { sec: TS, u0: 0, u1: 1, nu: 16, ys: ysamp([[TOR.yB - CL, TOR.yB, 1, 'l'], [TOR.yB, TOR.yB + TOR.rBx, 3, 'bot'], [TOR.yB + TOR.rBx, Y_SPLIT, 1, 'l']]), c: 0, t: 0 }), PELV);
       } else {
         // noyau sombre (visible dans les joints)
-        add(torso, shell('dgTorCore', { sec: TS, u0: 0, u1: 1, nu: 24, ys: ysamp([[TOR.yB - CL, TOR.yB, 1, 'l'], [TOR.yB, TOR.yB + TOR.rBx, 2, 'bot'], [TOR.yB + TOR.rBx, 55, 2, 'l'], [55, TOR.yT, 3, 'top'], [TOR.yT, TOR.yT + CL, 1, 'l']]), off: -0.6, c: 0, t: 0 }), SE);
+        add(torso, shell('dgTorCore', { sec: TS, u0: 0, u1: 1, nu: 24, ys: ysamp([[TOR.yB - CL, TOR.yB, 1, 'l'], [TOR.yB, TOR.yB + TOR.rBx, 2, 'bot'], [TOR.yB + TOR.rBx, 55, 2, 'l'], [55, TOR.yT, 3, 'top'], [TOR.yT, TOR.yT + CL, 1, 'l']]), off: -0.6, c: 0, t: 0 }), CORE);
         // coque avant + coque arrière sarcelle
         add(torso, shell('dgTorFront', { sec: TS, u0: -U_SEAM, u1: U_SEAM, nu: 38, ys: ysTeal, yLo: Y_SPLIT }), TEAL);
         add(torso, shell('dgTorBack', { sec: TS, u0: U_SEAM + 0.005, u1: 1 - U_SEAM - 0.005, nu: 30, ys: ysTeal, yLo: Y_SPLIT }), TEAL);
         // bassin noir
-        add(torso, shell('dgPelvis', { sec: TS, u0: 0, u1: 1, nu: 40, ys: ysPel, yHi: Y_SPLIT - 0.3 }), BK);
+        add(torso, shell('dgPelvis', { sec: TS, u0: 0, u1: 1, nu: 40, ys: ysPel, yHi: Y_SPLIT - 0.3 }), PELV);
 
         // --- façade : tableau LED vert, fentes noires, logo ---
         const xF = TOR.x0 + TOR.xf; // plan avant
@@ -381,7 +620,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
         add(torso, fuse('dgPanelLens', [[g.cyl(0.55, 0.55, 0.3, 14, 'x'), [0, 0, -1.6]], [g.cyl(0.55, 0.55, 0.3, 14, 'x'), [0, 0, 1.6]]]), GL, [xF + 0.82, 45.6, 0]);
         for (const zz of [10.6, -10.6]) {
           add(torso, g.rbox(1.6, 13.4, 2.6, 0.9, 2), BK, [xF - 0.2, 50.4, zz]);
-          add(torso, g.rbox(0.6, 12.2, 1.4, 0.5, 2), SE, [xF + 0.45, 50.4, zz]);
+          add(torso, g.rbox(0.6, 12.2, 1.4, 0.5, 2), FIN, [xF + 0.45, 50.4, zz]);
         }
         add(torso, g.ccyl(1.8, 0.5, 0.15, 24, 'x'), BK, [xF + 0.05, 35.5, 0]);
         add(torso, g.torus(1.05, 0.2, 20, 5, PI * 1.5, 'x'), WH, [xF + 0.32, 35.5, 0]);
@@ -395,6 +634,10 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
         add(torso, fuse('dgGrille', (() => { const it = []; for (let r = 0; r < 10; r++) it.push([g.box(0.6, 0.9, 15), [0, (r - 4.5) * 2.0, 0]]); return it; })()), GR, [-(TOR.xb - TOR.x0) - 2.2, 46, 0]);
         // embase du cou
         add(torso, g.ccyl(7.4, 1.2, 0.4, 32), BK, [0, TOR.yT + 0.2, 0]);
+        // SÉCURITÉ : deux bandes rétro-réfléchissantes autour du buste (façon gilet haute visibilité)
+        if (SGEO === 'refl') for (const [y0, y1] of [[25.4, 28.0], [30.4, 33.0]])
+          add(torso, shell('dgSkRefl' + y0, { sec: TS, u0: 0, u1: 1, nu: 40, ys: [y0, y1], yLo: y0, yHi: y1, off: 0.32, c: 0, t: 0.6 }), REFL);
+        if (MARK) marks(torso, 'Tor', [[0.12, 59], [-0.12, 59], [0.16, 9.5], [-0.16, 9.5]].map(([u, y]) => SP(TS, u, y, 0.55)).concat([[-15.3, 54, 9.2], [-15.3, 54, -9.2]]));
       }
       // carters réels des actionneurs de lacet de hanche (Cassie) sous le bassin
       if (!low) torso.add(realPiece(ctx, MAT, 'hipY', /hip-yaw/, { pivot: hipC }, (gm) => 'gr', null));
@@ -419,10 +662,10 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
       const h = ctx.group(), hy = -2.4;
       const yT = HEAD.yT, yB = HEAD.yB;
       if (low) {
-        add(h, shell('dgHeadLo', { sec: HS, u0: 0, u1: 1, nu: 16, ys: ysamp([[yB - CL, yB, 1, 'l'], [yB, yT - 3, 2, 'l'], [yT - 3, yT, 2, 'top'], [yT, yT + CL, 1, 'l']]), c: 0, t: 0 }), WH, [0, hy, 0]);
+        add(h, shell('dgHeadLo', { sec: HS, u0: 0, u1: 1, nu: 16, ys: ysamp([[yB - CL, yB, 1, 'l'], [yB, yT - 3, 2, 'l'], [yT - 3, yT, 2, 'top'], [yT, yT + CL, 1, 'l']]), c: 0, t: 0 }), HEADM, [0, hy, 0]);
       } else {
-        add(h, shell('dgHeadCap', { sec: HS, u0: 0, u1: 1, nu: 56, ys: ysamp([[Y_HEADSPLIT, yT - HEAD.rTz, 3, 'l'], [yT - HEAD.rTz, yT, 7, 'top'], [yT, yT + CL, 3, 'l']]), yLo: Y_HEADSPLIT - 0.3, c: 0.3, t: 1.0 }), WH, [0, hy, 0]);
-        add(h, shell('dgHeadBand', { sec: HS, u0: 0, u1: 1, nu: 44, off: -0.45, ys: ysamp([[yB - CL, yB, 2, 'l'], [yB, yB + HEAD.rBx, 4, 'bot'], [yB + HEAD.rBx, Y_HEADSPLIT + 0.4, 2, 'l']]), c: 0, t: 0 }), BK, [0, hy, 0]);
+        add(h, shell('dgHeadCap', { sec: HS, u0: 0, u1: 1, nu: 56, ys: ysamp([[Y_HEADSPLIT, yT - HEAD.rTz, 3, 'l'], [yT - HEAD.rTz, yT, 7, 'top'], [yT, yT + CL, 3, 'l']]), yLo: Y_HEADSPLIT - 0.3, c: 0.3, t: 1.0 }), HEADM, [0, hy, 0]);
+        add(h, shell('dgHeadBand', { sec: HS, u0: 0, u1: 1, nu: 44, off: -0.45, ys: ysamp([[yB - CL, yB, 2, 'l'], [yB, yB + HEAD.rBx, 4, 'bot'], [yB + HEAD.rBx, Y_HEADSPLIT + 0.4, 2, 'l']]), c: 0, t: 0 }), BAND, [0, hy, 0]);
         // yeux : matrices de LED blanches (quinconce) sur fenêtre fumée
         const eyeY = 1.0, ex = HEAD.xf;
         for (const zz of [5.6, -5.6]) add(h, g.rbox(0.5, 4.6, 9.2, 0.22, 2), EYEBG, [ex - 0.1, hy + eyeY, zz]);
@@ -441,9 +684,19 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
         };
         for (const zz of [2.4, -2.4]) lens(HEAD.xf - 0.45, -3.4, zz, 'x', 0.75);
         lens(HEAD.xf - 0.45, -3.5, 8.4, 'x', 0.5); lens(HEAD.xf - 0.45, -3.5, -8.4, 'x', 0.5);
-        for (const s of [1, -1]) for (const [xx, r] of [[-5.5, 0.7], [-0.6, 0.85], [1.6, 0.5], [5.4, 0.7]]) lens(xx, -3.4, s * (HEAD.z - 0.45), 'z', r);
+        if (SGEO !== 'proto') for (const s of [1, -1]) for (const [xx, r] of [[-5.5, 0.7], [-0.6, 0.85], [1.6, 0.5], [5.4, 0.7]]) lens(xx, -3.4, s * (HEAD.z - 0.45), 'z', r);   // (PROTOTYPE : tête-boîtier sans caméras latérales)
         add(h, fuse('dgLensRings', rings), GR, [0, hy, 0]);
         add(h, fuse('dgLensGlass', glass), GL, [0, hy, 0]);
+        // NOCTURNE : filet lumineux sous le bord du casque
+        if (SGEO === 'lines') add(h, shell('dgSkLineHd', { sec: HS, u0: 0, u1: 1, nu: 56, ys: [Y_HEADSPLIT - 0.8, Y_HEADSPLIT - 0.25], off: -0.12, c: 0, t: 0 }), CORE, [0, hy, 0]);
+        // PROTOTYPE : lidar rotatif sur le dessus (Digit v1-v2) + marqueurs de capture
+        if (SGEO === 'proto') {
+          const ly = hy + yT;
+          add(h, fuse('dgSkLidarB', [[g.ccyl(4.0, 0.9, 0.25, 18), [-1.2, 0.35, 0]], [g.cyl(3.5, 3.5, 4.6, 18, 'y', true), [-1.2, 3.1, 0]], [g.ccyl(3.7, 0.8, 0.25, 18), [-1.2, 5.6, 0]]]), BK, [0, ly, 0]);
+          add(h, g.cyl(3.58, 3.58, 1.7, 18, 'y', true), GL, [-1.2, ly + 3.3, 0]);
+          add(h, g.ccyl(2.2, 0.4, 0.15, 12), GR, [-1.2, ly + 6.1, 0]);
+          marks(h, 'Hd', [[-6.5, ly - 0.4, 10.5], [-6.5, ly - 0.4, -10.5]]);
+        }
       }
       P.head = h;
     }
@@ -500,7 +753,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
       P[sd + 'sc'] = sidePart(z, gr => {
         add(gr, g.lathe(DRUM, low ? 10 : 26, 'z'), BK, [0, 1.2, 0]);
         if (!low) {
-          add(gr, g.torus(6.75, 0.16, 32, 3, PI * 2, 'z'), SE, [0, 1.2, -2.2]);
+          add(gr, g.torus(6.75, 0.16, 32, 3, PI * 2, 'z'), DRING, [0, 1.2, -2.2]);
           add(gr, fuse('dgShVents', [0, 1, 2].map(i => [g.cbox(2.6, 0.45, 0.6, 0.15), [0, i * 1.5, 0]])), SE, [3.6, 3.4, 3.4], [0, -0.55, 0.5]);
         }
       });
@@ -518,10 +771,12 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
         }
         add(gr, shell('dgUAgrey', { sec: UAG, u0: 0, u1: 1, nu: 28, ys: ysamp([[-CL, 0, 1, 'l'], [0, 17.6, 3, 'l'], [17.6, 17.6 + CL, 1, 'l']]), c: 0, t: 0 }), LG);
         add(gr, shell('dgUAblack', { sec: UAB, u0: 0, u1: 1, nu: 32, ys: ysamp([[15.4 - CL, 15.4, 1, 'l'], [15.4, 30.6, 3, 'l'], [30.6, 34.2, 4, 'top'], [34.2, 34.2 + CL, 1, 'l']]), c: 0, t: 0 }), BK);
-        add(gr, g.ccyl(3.75, 0.8, 0.2, 24), GR, [0, 6.6, 0], [0, 0, 0], [1, 1, 1.12]);
+        add(gr, g.ccyl(3.75, 0.8, 0.2, 24), RING, [0, 6.6, 0], [0, 0, 0], [1, 1, 1.12]);
         add(gr, g.cbox(0.5, 1.4, 2.4, 0.15), SE, [-3.3, 11.5, 0]);
         const it = []; for (let r = 0; r < 6; r++) for (let c = 0; c < 4; c++) it.push([g.box(0.4, 0.62, 0.62), [0, 18.6 + r * 1.35, (c - 1.5) * 1.35 + (r % 2) * 0.3]]);
         add(gr, fuse('dgArmGrille', it), SE, [-4.33, 0, 0]);
+        if (SGEO === 'refl') add(gr, shell('dgSkReflUA', { sec: UAB, u0: 0, u1: 1, nu: 24, ys: [26.6, 29.2], yLo: 26.6, yHi: 29.2, off: 0.22, c: 0, t: 0.45 }), REFL);
+        marks(gr, 'UA', [[0, 4.2, 8.3]]);
       });
       P[sd + 'el'] = sidePart(z, gr => {
         add(gr, g.ccyl(5.2, 10.2, 1.1, low ? 10 : 28, 'z'), BK);
@@ -534,9 +789,11 @@ if (typeof RK !== 'undefined' && RK) RK.models.digit = (function () {
         add(gr, g.ccyl(3.25, 8.4, 0.45, 22), LG, [0, 13.4, 0]);
         add(gr, g.ccyl(3.55, 1.5, 0.3, 22), BK, [0, 18.2, 0]);
         add(gr, g.ccyl(3.05, 6.8, 0.45, 22), LG, [0, 22.2, 0]);
-        add(gr, g.ccyl(3.3, 1.2, 0.3, 22), GR, [0, 26.2, 0]);
+        add(gr, g.ccyl(3.3, 1.2, 0.3, 22), RING, [0, 26.2, 0]);
         add(gr, g.ccyl(2.85, 4.6, 0.4, 20), LG, [0, 29, 0]);
         add(gr, fuse('dgFaScrews', [11, 15.8, 20.4, 24].map(y => [g.cyl(0.35, 0.35, 0.4, 6, 'z'), [0, y, 3.25]])), SIL);
+        if (SGEO === 'refl') add(gr, g.cyl(3.45, 3.45, 2.6, 20, 'y', true), REFL, [0, 13.4, 0]);
+        marks(gr, 'FA', [[0, 20.4, 3.6]]);
       });
       P[sd + 'ha'] = digitHand(z);
     }

@@ -2,7 +2,8 @@
 
 Jeu de combat HTML5 façon Street Fighter II avec de vrais robots humanoïdes :
 Optimus (Tesla), Atlas (Boston Dynamics), Figure 02, ASIMO (Honda), Unitree H1,
-Ameca (Engineered Arts), Digit (Agility Robotics), T800 (EngineAI · REK), Apollo (Apptronik).
+Ameca (Engineered Arts), Digit (Agility Robotics), T800 (EngineAI · REK), Apollo (Apptronik)
+et Asimov (Menlo Research, robot open source, en « version combat » de 1,85 m).
 
 Ouvrir `index.html` via un serveur web (ex. `python3 -m http.server`) puis jouer.
 
@@ -22,6 +23,8 @@ Ouvrir `index.html` via un serveur web (ex. `python3 -m http.server`) puis jouer
 - Optimus et Atlas ont chacun 8 skins (couleurs, finitions et motifs différents, coups spéciaux assortis) :
   Optimus — Original, Noir carbone, Chrome liquide, Rouge Tesla, Or 24 carats, Cyberpunk, Arctique, Militaire ;
   Atlas — Original, Magma, Chantier, Furtif, Cuivre patiné, Anti-émeute, Hydraulique, Nacre royale.
+- T800 : Original, ENDOSQUELETTE (chrome, crâne et yeux rouges, façon film), REK Arène.
+- Digit : Original, Cassie, Prototype, Sécurité, Nocturne, Autruche, Urbain.
 - À la sélection, valider un robot qui a des skins ouvre le choix du skin (◀ ▶ puis valider).
 - Combat miroir (même robot des deux côtés) : le joueur 2 prend automatiquement un autre skin (ou une teinte).
 
@@ -33,15 +36,26 @@ Ouvrir `index.html` via un serveur web (ex. `python3 -m http.server`) puis jouer
   la finale du Tournoi se joue à l'Arène mondiale.
 - `node tools/arena.js <arène> sortie.png` produit une planche de prévisualisation d'une arène dans le vrai jeu.
 
+## Animations personnelles
+- Chaque robot a sa propre intro sur l'écran de sélection (kung-fu d'Optimus, réveil contorsionniste d'Atlas,
+  « hello » d'ASIMO, réveil d'Ameca, démarrage d'Asimov…) et sa célébration de victoire unique, jouée en combat,
+  à la validation du robot, sur l'écran de résultat et à la fin du mode (`js/motions/<robot>.js`).
+- `node tools/move.js <robot> intro|victory|win|<coup> sortie.png` produit une planche image par image dans le vrai jeu.
+
 ## Combat
 - Rendu 3D temps réel (Three.js) sur les décors des vidéos, caméra cinématique, reflets au sol.
-- Coups de boxe française / MMA (fouetté, chassé, retourné, genou sauté, balayette), projections,
+- Coups de boxe française / MMA vus de côté (fouetté et high kick avec rotation de hanche et genou armé sur le côté,
+  chassé latéral, retourné, genou sauté, balayette), projections,
+- T800 : CYCLONE KICK (↓ ↙ ← + K), inspiré du coup de pied tourbillon du wushu (xuanfeng jiao) : croissant à l'appel,
+  tour complet en l'air, claque de la main sur le pied, réception en cavalier.
+- Atlas : COUDE RETOURNÉ (LP, LP, HP rapides) — le buste fait un tour complet, jambes plantées.
   prises inédites d'Atlas (TORSION 360, MOULINET 720), boules d'énergie, uppercuts, SUPER avec cinématique.
 - Effets : étincelles, éclats métalliques, hit-stop, tremblement, ralenti au K.O., combos.
 
 ## Robots 3D
 - Unitree H1, Apptronik Apollo et les jambes de Digit (Agility Cassie) utilisent les **maillages
-  officiels** des constructeurs publiés dans MuJoCo Menagerie (voir `js/meshes/README.md` pour les
-  sources et licences BSD-3 / Apache-2.0 / MIT), convertis par `tools/mjcf2rk.py`.
+  officiels** des constructeurs publiés dans MuJoCo Menagerie, et Asimov ceux de son dépôt open source
+  `menloresearch/asimov-1` (voir `js/meshes/README.md` pour les sources et licences BSD-3 / Apache-2.0 / MIT /
+  CERN-OHL-S-2.0), convertis par `tools/mjcf2rk.py`.
 - Les autres robots sont modélisés à la main d'après des photos (`js/models/*.js`).
 - `node tools/shoot.js <robot> sortie.png` produit une planche de prévisualisation d'un modèle.
