@@ -398,7 +398,7 @@ class Fighter {
       case 'land':
         if (this.t >= this.landRec) { this.setSt('idle'); this.amv = null; }
         break;
-      case 'win': victoryEvents(this.ch, this.t, o => motionFire(o, this.ch, this.x + this.vdx * this.face, GROUND - this.vdy, 1, this.face)); break;
+      case 'win': victoryEvents(this.ch, this.t, o => motionFire(o, this.ch, this.x + this.vdx * this.face, GROUND - this.vdy, 1, this.face), 'win'); break;
       case 'lose': break;
     }
     // ---- physique
@@ -707,10 +707,10 @@ class Fighter {
         break;
       }
       case 'win': { // célébration personnelle du robot (js/motions/<id>.js), sinon poses génériques
-        const seq = motionOf(ch, 'victory');
+        const seq = motionOf(ch, 'win') || motionOf(ch, 'victory');
         if (seq) {
           const idle = { ...POSES.idle }; idle.fe += bob; idle.be -= bob; idle.fk += bob; idle.lean += bob * 0.3;
-          const m = motionSample(seq, victoryT(ch, t), idle), k = clamp(t / 10, 0, 1);
+          const m = motionSample(seq, victoryT(ch, t, 'win'), idle), k = clamp(t / 10, 0, 1);
           p = k < 1 ? lerpPose(POSES.idle, m.pose, easeOut(k)) : m.pose;
           this.vYaw = lerp(-0.42, m.yaw, k); this.vdx = m.dx * k; this.vdy = m.dy * k;
           break;

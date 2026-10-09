@@ -3,6 +3,9 @@
    intro   : « Ameca se réveille » (la vidéo virale d'Engineered Arts) : en veille, tête basse ; sursaut, regard
              circulaire, elle découvre ses propres mains avec émerveillement, puis se tourne vers la caméra
              et penche la tête, sourcil levé… avant de reprendre la garde
+   win     : (manche gagnée en combat) numéro de MIME : face au public, il heurte une vitre invisible, la tâte des deux mains,
+             trouve les parois sur les côtés puis le plafond qui s'abaisse (genoux pliés), tape la vitre, trouve une poignée,
+             la tourne, s'échappe d'un pas et salue ; en boucle : de nouveau prisonnier de la cage de verre
    victory : numéro de théâtre sarcastique : petit pas vers le public, haussement d'épaules « Too easy. »,
              éclat de rire tête en arrière, grande révérence avec moulinet du bras ; en boucle : applaudissements
              lents et ironiques, levée des yeux au ciel, soupir, haussement d'épaules */
@@ -176,5 +179,48 @@
     ],
     victoryLoop: 15,
     fx
+  };
+})();
+
+// ---- victoire de manche : le mime dans la cage de verre ----
+(() => {
+  const I = POSES.idle;
+  const st = { ...I, lean: 0, hd: 0, fh: 10, fk: 8, bh: -10, bk: 6, grip: 0 };
+  // paumes à plat sur la vitre de devant : avant-bras verticaux (épaule + coude = 180°), mains à hauteur du visage
+  const wall = (f, b, x) => ({ ...st, fs: f, fe: 180 - f, bs: b, be: 180 - b, ...x });
+  const A = { yaw: -1.57, dx: 6 }, B = { yaw: -1.57, dx: 18 };
+  const roof = { ...st, fs: 178, fe: 6, bs: 178, be: 6, axf: 0.15, axb: 0.15, hd: -18, lean: -2, fh: 26, fk: 34, bh: 6, bk: 34 };
+  const knob = { ...st, fs: 62, fe: 50, bs: 25, be: 40, grip: 1, hd: 6 };
+  MOTIONS.ameca.win = [
+    [st, 10, { yaw: -1.57 }],
+    [{ ...st, lean: 6, hd: 4, fs: 20, fe: 30, bs: 20, be: 30 }, 6, A],
+    [wall(50, 50, { lean: -8, hd: -6 }), 4, { ...A, fx: 'glass' }],             // bam ! la vitre
+    [wall(48, 48, { lean: -2 }), 8, A],
+    [wall(62, 40, { headSpin: 0.25 }), 10, A],                                    // les mains glissent sur le verre
+    [wall(40, 62, { headSpin: -0.25 }), 10, A],
+    [wall(55, 55, {}), 8, A],
+    [{ ...st, fs: 0, fe: 6, axf: 1.45, bs: 50, be: 130, headSpin: 0.7 }, 10, { ...A, fx: 'glass' }],        // paroi de côté
+    [{ ...st, fs: 0, fe: 6, axf: 1.45, bs: 0, be: 6, axb: 1.45, headSpin: -0.6 }, 10, { ...A, fx: 'glass' }], // les deux parois
+    [roof, 10, { ...A, fx: 'glass' }],                                            // le plafond…
+    [{ ...roof, fe: 25, be: 25, fh: 40, fk: 60, bh: 18, bk: 60 }, 8, A],          // …qui descend
+    [wall(50, 50, { lean: 4, hd: 2, fh: 20, fk: 22, bh: 0, bk: 20 }), 7, A],
+    [wall(56, 44, { lean: 2 }), 5, { ...A, fx: 'glass' }],                        // panique : il tape
+    [wall(44, 56, { lean: 4 }), 5, { ...A, fx: 'glass' }],
+    [knob, 10, A],                                                                // une poignée !
+    [{ ...knob, twist: 0.25 }, 6, A],
+    [{ ...st, lean: 4, hd: 6, fs: 0, fe: 10, bs: 0, be: 10, axf: 2.0, axb: 2.0 }, 10, { ...B, sfx: 'select' }], // libre
+    [{ ...st, lean: 30, hd: 25, fs: 10, fe: 20, bs: 60, be: 110, axf: 0.6 }, 12, B],                         // révérence
+    [{ ...st, lean: 2, fs: 15, fe: 20, bs: 15, be: 20 }, 10, B],
+    [wall(50, 50, {}), 8, { ...B, fx: 'glass' }],                                 // …et de nouveau dans la cage
+    [wall(62, 40, { headSpin: 0.25 }), 10, B],
+    [wall(40, 62, { headSpin: -0.25 }), 10, B],
+    [wall(50, 50, {}), 10, B]
+  ];
+  MOTIONS.ameca.winLoop = 20;
+  // reflets de la vitre invisible au contact des paumes
+  MOTIONS.ameca.fx.glass = (ch, x, footY, sc, face) => {
+    AU.sfx('block');
+    for (const dx of [-26, 26]) FX.add({ type: 'ring', x: x + dx * sc, y: footY - 128 * sc, size: 22 * sc, life: 12, max: 12, col: '#d8f4ff', lw: 2 });
+    for (let i = 0; i < 6; i++) FX.add({ type: 'spark', x: x + rand(-40, 40) * sc, y: footY - rand(100, 160) * sc, vx: 0, vy: rand(-1, 1), size: 2, life: 14, max: 14, col: '#ffffff', len: 2 });
   };
 })();
