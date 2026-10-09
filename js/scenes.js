@@ -66,11 +66,12 @@ class Fight {
     return clamp(x, lo, hi);
   }
   announce(text, dur, style = {}) { this.ann = { text, t: 0, dur, ...style }; }
-  announceMove(f, name) { this.moveTxt = { side: f.side, name, t: 0, col: f.ch.accent }; AU.say(name.replace('360', 'three sixty').replace('720', 'seven twenty'), 0.5, 1.05); }
+  // nom du coup affiché à l'écran (sans voix : l'annonceur ne parle que pour les manches, FIGHT, K.O., etc.)
+  announceMove(f, name) { this.moveTxt = { side: f.side, name, t: 0, col: f.ch.accent }; }
   startSuper(f) {
     f.meter -= 100; f.setSt('super'); f.sp = f.ch.sup; f.inv = 999; f.hitN = 0; f.hitCD = 0; f.connected = false; f.vx = 0; f.beam = null;
     this.superFreeze = 62; this.superBy = f;
-    AU.sfx('super'); AU.say(f.ch.supName, 0.5, 1.05);
+    AU.sfx('super');
     explosion(f.x, f.hipY - 40, f.ch.accent, 0.8);
   }
   applyHit(a, d, pt, mv, canBlock = true, src = null) {
@@ -256,7 +257,7 @@ class Fight {
         this.phase = 'ko'; this.phaseT = 0; this.slowmo = 75; this.flash = 10; this.flashCol = '#fff'; this.shake = 20;
         [a, b].forEach(f => { if (f.hp <= 0) { f.ko = true; if (f.st !== 'fall') { f.setSt('fall'); f.vy = -11; f.vx = -f.face * 6; f.y = Math.min(f.y, GROUND - 1); } } });
         this.announce(ka && kb ? 'DOUBLE K.O.' : 'K.O.', 140, { big: 1, red: 1 });
-        AU.sfx('ko'); AU.say('K.O.', 0.3, 0.7);
+        AU.sfx('ko'); AU.say('Knockout.', 0.3, 0.7);
         this.winner = ka && kb ? -1 : ka ? 1 : 0;
       } else if (this.timer <= 0) {
         this.phase = 'ko'; this.phaseT = 0; this.announce('TIME OVER', 140, { big: 1 }); AU.say('Time over');

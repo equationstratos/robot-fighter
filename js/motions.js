@@ -46,7 +46,7 @@ function motionEvents(seq, t0, t1, times, cb) {
 // une image-clé démarre : effet visuel (fx propre au robot, sinon puppetFx), voix, son
 function motionFire(o, ch, x, footY, sc, face) {
   if (o.fx) { const m = MOTIONS[(ch.base || ch).id], f = m && m.fx && m.fx[o.fx]; if (f) f(ch, x, footY, sc, face); else puppetFx(o.fx, ch, x, footY, sc, face); }
-  if (o.say) AU.say(o.say, 0.6, 1);
+  if (o.say) AU.say(o.say, 0.6, 1, 'robot');
   if (o.sfx) AU.sfx(o.sfx);
 }
 function motionOf(ch, kind) { const m = MOTIONS[(ch.base || ch).id]; return m && m[kind] && m[kind].length ? m[kind] : null; }

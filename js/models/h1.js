@@ -266,8 +266,14 @@ if (typeof RK !== 'undefined' && RK) RK.models.h1 = (function () {
       // bras : moteur de roulis + étrier (moteur de lacet) + bras (moteur de coude)
       const UA_O = { pivot: sh, to: el, len: L.ua, frame: 'limb', k: kA };
       const ua = realPart([s + '_shoulder_pitch_link', s + '_shoulder_roll_link', s + '_shoulder_yaw_link'], ANO, UA_O);
+      // tube du bras entre le moteur de roulis et le haut du maillage de lacet (ce tronçon, y 124..145, a été perdu
+      // à la décimation de la CAO) : tube anodisé légèrement aplati, comme sur le vrai H1
+      const tg = realGroup(UA_O); ua.add(tg);
+      add(tg, g.cyl(3.5, 3.3, 22, low ? 8 : 20, 'y'), ANO, [1.2, 134.5, sh[2]], null, [1, 1, 0.88]);
       if (!low) {
         const ag = realGroup(UA_O); ua.add(ag);
+        add(ag, g.torus(3.45, 0.32, 24, 6, 2 * PI, 'y'), RIM, [1.2, 124.6, sh[2]]);          // bague de jonction
+        add(ag, g.torus(3.6, 0.32, 24, 6, 2 * PI, 'y'), RIM, [1.2, 145.0, sh[2]]);
         motor(ag, [0, sh[1], sh[2]], 'x', 4.95, -3.55, 3.55, [1], { n: 6 });                     // roulis d'épaule
         motor(ag, [0, 138.6, sh[2]], 'y', 4.95, 136.1, 141.1, []);                              // lacet d'épaule
         motor(ag, [el[0], el[1], sh[2]], 'z', 4.95, z > 0 ? 18.5 : -23.9, z > 0 ? 23.9 : -18.5, [1], { n: 6 }); // coude

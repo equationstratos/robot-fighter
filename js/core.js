@@ -249,12 +249,36 @@ const AU = {
       case 'clash': this.tone(1200, 0.3, 'square', 0.15, 300); this.noise(0.3, 3000, 0.4); break;
     }
   },
-  say(text, pitch = 0.4, rate = 0.85) {
+  /* -------- voix --------
+     annonceur (manches, FIGHT, K.O., noms…) : voix d'IA majordome façon « Jarvis » — voix de synthèse anglaise
+     britannique masculine du navigateur, posée, un peu grave (la vraie voix du film n'est pas reproduite).
+     who = 'robot' : répliques des robots (célébrations), voix américaine plus mécanique, hauteur au choix */
+  voices: null, jarvis: null,
+  pickVoices() {
+    try {
+      const vs = speechSynthesis.getVoices(); if (!vs || !vs.length) return;
+      this.voices = vs;
+      const fem = /female|femme|kate|serena|susan|hazel|libby|sonia|martha|fiona|stephanie|moira|tessa|karen|samantha|victoria|zira|aria|jenny|emma|amy|mia|maisie/i;
+      const gb = vs.filter(v => /^en[-_]GB/i.test(v.lang));
+      this.jarvis = vs.find(v => /Google UK English Male/i.test(v.name))
+        || gb.find(v => /daniel|arthur|george|ryan|oliver|thomas|malcolm|gordon|harry|alfie|elliot|male/i.test(v.name) && !fem.test(v.name))
+        || gb.find(v => !fem.test(v.name)) || gb[0]
+        || vs.find(v => /^en/i.test(v.lang) && /daniel|alex|fred|david|mark|guy|male/i.test(v.name) && !fem.test(v.name)) || null;
+    } catch (e) { }
+  },
+  say(text, pitch = 0.4, rate = 0.85, who) {
     try {
       if (!window.speechSynthesis) return;
+      if (!this.voices) { this.pickVoices(); if (!this._vc) { this._vc = 1; speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', () => this.pickVoices()); } }
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US'; u.pitch = pitch; u.rate = rate; u.volume = 1;
+      if (who === 'robot') { u.lang = 'en-US'; u.pitch = pitch; u.rate = rate; }
+      else {
+        // Jarvis : calme et articulé — hauteur un peu grave, débit posé, quelle que soit la demande d'origine
+        u.lang = 'en-GB'; if (this.jarvis) u.voice = this.jarvis;
+        u.pitch = 0.82; u.rate = Math.min(1.02, Math.max(0.9, rate * 1.05));
+      }
+      u.volume = 1;
       speechSynthesis.speak(u);
     } catch (e) { }
   },
