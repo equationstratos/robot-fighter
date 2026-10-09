@@ -70,8 +70,22 @@ function keyPose(keys, t, leg) {
 }
 // jambe de frappe d'un coup ('f' | 'b') si sa hitbox est un pied, sinon ''
 const kickLeg = m => (m && m.limb && m.limb.endsWith('fo') ? m.limb[0] : '');
+// pose d'un coup normal à l'image t de l'état 'attack' : images-clés (kx = recalage de portée d'un coup de style,
+// js/styles.js), sinon interpolation garde → frappe → garde
+function normalPose(m, t) {
+  if (m.keys) { const p = keyPose(m.keys, t, kickLeg(m)); if (m.kx) p.sx *= m.kx(t); return p; }
+  const base = POSES[m.base || 'idle'], strike = POSES[m.pose];
+  if (t < m.st) return lerpPose(base, strike, easeOut(t / m.st) * 0.85);
+  if (t < m.st + m.ac) return strike;
+  return lerpPose(strike, base, easeIn((t - m.st - m.ac) / m.rc));
+}
 // images-clés du cyclone kick (poses cy* de robots.js) ; la réception est gérée à part (cyLand → garde)
 const CYCLONE_KEYS = [[0, 'idle'], [8, 'cyWind'], [13, 'cyLift'], [18, 'cyCres1'], [24, 'cyAir'], [29, 'cyKick'], [33, 'cyKick'], [39, 'cyFall']];
+// relevé du T800 : kip-up (20 images, même durée que le relevé normal)
+const T800_KIPUP = [[0, { ...POSES.down, rot: -90 }],
+  [7, { ...POSES.down, rot: -112, fh: 140, fk: 10, bh: 140, bk: 10, fs: 172, fe: 80, bs: 172, be: 80 }],
+  [12, { ...POSES.crouch, rot: -25, fh: 40, fk: 110, bh: 20, bk: 110, fs: 150, fe: 30, bs: 150, be: 30 }],
+  [20, 'crouch']];
 const SPECIAL_MV = {
   proj: { dmg: 90, hs: 22, bs: 16, kb: 8, lvl: 3, chip: true },
   uppercut: { limb: 'fha', r: 26, dmg: 70, hs: 25, bs: 16, kb: 4, lvl: 3, kd: true, launch: -10, hits: 2, every: 8, chip: true },
@@ -253,6 +267,10 @@ class Fighter {
     this.computeSkel();
   }
   get air() { return this.y < GROUND - 0.5 || this.vy < 0; }
+  // style de combat du robot (ROSTER style: 'muaythai' → STYLES, js/styles.js) ou null
+  get style() { return this.ch.style && typeof STYLES !== 'undefined' ? STYLES[this.ch.style] || null : null; }
+  // coup normal : version du style du robot s'il la redéfinit (même frame data), sinon NORMALS
+  normalOf(key) { return (this.ch.style && typeof styleMove === 'function' && styleMove(this.ch, key)) || NORMALS[key]; }
   get neutral() { return ['idle', 'walk', 'crouch', 'guard'].includes(this.st); }
   get canBlock() { return ['idle', 'walk', 'crouch', 'guard', 'block'].includes(this.st); }
   setSt(s) { this.st = s; this.t = 0; }
@@ -300,8 +318,8 @@ class Fighter {
     const crouch = this.dirN <= 3;
     // projection : avant/arrière + poing fort, au contact
     if (btn === 'hp' && (this.dirN === 6 || this.dirN === 4) && this.canThrow(o)) { this.startThrow(o, F); return true; }
-    if (!crouch && this.dirN === 6 && NORMALS['f' + btn]) { this.startNormal('f' + btn); return true; }
-    this.startNormal((crouch ? 'c' : '') + btn);
+    if (!crouch && this.dirN === 6 && this.normalOf('f' + btn)) { this.startNormal('f' + btn, F); return true; }
+    this.startNormal((crouch ? 'c' : '') + btn, F);
     return true;
   }
   canThrow(o) {
@@ -313,8 +331,9 @@ class Fighter {
     o.heldHipY = null; o.heldPose = POSES.hit; o.z3 = 0; o.face = -this.face;
     AU.sfx('block'); F.announceMove && F.announceMove(this, this.ch.throwName || 'PROJECTION');
   }
-  startNormal(key) {
-    this.mv = NORMALS[key]; this.setSt('attack'); this.vx = 0; this.hitN = 0; this.hitCD = 0; this.connected = false; this.basePose = this.mv.base || 'idle';
+  startNormal(key, F) {
+    this.mv = this.normalOf(key); this.setSt('attack'); this.vx = 0; this.hitN = 0; this.hitCD = 0; this.connected = false; this.basePose = this.mv.base || 'idle';
+    if (this.mv.announce && F && F.announceMove) F.announceMove(this, this.mv.name);
   }
   startSpecial(type, str, F) {
     this.setSt('special'); this.sp = type; this.str = str; this.hitN = 0; this.hitCD = 0; this.connected = false;
@@ -324,7 +343,7 @@ class Fighter {
   }
   // ----- mise à jour par frame -----
   update(pad, o, F, controllable) {
-    this.pad = pad; this.t++;
+    this.pad = pad; this.t++; this.clk = (this.clk || 0) + 1; // clk : horloge continue (rythme des styles)
     if (this.inv > 0 && this.inv < 900) this.inv--;
     if (this.flash > 0) this.flash--;
     if (this.hitCD > 0) this.hitCD--;
@@ -359,7 +378,7 @@ class Fighter {
         if (this.amv) { this.at++; }
         else if (controllable) {
           const b = this.takeBuf(F.frame);
-          if (b && ['lp', 'hp', 'lk', 'hk'].includes(b.b)) { this.amv = NORMALS['j' + b.b]; this.at = 0; this.hitN = 0; this.hitCD = 0; this.mv = this.amv; this.connected = false; }
+          if (b && ['lp', 'hp', 'lk', 'hk'].includes(b.b)) { this.amv = this.normalOf('j' + b.b); this.at = 0; this.hitN = 0; this.hitCD = 0; this.mv = this.amv; this.connected = false; }
           else if (b && b.b === 'su' && this.meter >= 100 && this.ch.sup === 'beam') { /* pas de super aérien */ }
         }
         break;
@@ -370,7 +389,7 @@ class Fighter {
         if (m.hop && this.t === m.hop.at) { this.vx = m.hop.vx * this.face; this.vy = m.hop.vy; AU.sfx('jump'); }
         if (m.hop && !this.air && this.t > m.hop.at + 3) this.vx *= 0.6;
         if (this.t === m.st) AU.sfx(m.lvl > 1 ? 'whiffH' : 'whiff');
-        if (m === NORMALS.lp && controllable && this.t >= m.st && this.elbowChain(F.frame)) { this.startElbow(F); break; }
+        if ((m === NORMALS.lp || m.src === 'lp') && controllable && this.t >= m.st && this.elbowChain(F.frame)) { this.startElbow(F); break; }
         if (m.cancel && this.connected && controllable && this.t < tot - 1) { if (this.tryAttack(F, o, true)) break; }
         if (this.t >= tot) { this.setSt(m.base === 'crouch' && dir <= 3 ? 'crouch' : 'idle'); this.mv = null; }
         break;
@@ -393,6 +412,7 @@ class Fighter {
         if (!this.ko && this.t >= 38) { this.setSt('getup'); }
         break;
       case 'getup':
+        if (this.ch.id === 't800') { if (this.t === 8) AU.sfx('whiff'); if (this.t === 18) { dust(this.x, GROUND, 8); AU.sfx('land'); } }
         if (this.t >= 20) { this.inv = 6; this.setSt('idle'); }
         break;
       case 'land':
@@ -659,6 +679,8 @@ class Fighter {
     let p; this.vYaw = null; this.vdx = 0; this.vdy = 0; // orientation / décalage visuels (célébration)
     switch (st) {
       case 'idle': case 'prejump': {
+        const S = this.style;
+        if (S && S.idle) { p = S.idle(this); if (st === 'prejump') p = lerpPose(p, POSES.crouch, 0.4); break; } // garde du style
         p = { ...POSES.idle }; p.fe += bob; p.be -= bob; p.fk += bob; p.bk += bob * 0.6; p.lean += bob * 0.3;
         if (st === 'prejump') p = lerpPose(p, POSES.crouch, 0.4);
         else if (ch.id === 'atlas') { // moteurs 360° : la tête fait un tour complet, le buste regarde derrière
@@ -670,6 +692,8 @@ class Fighter {
       }
       case 'guard': p = POSES.block; break;
       case 'walk': {
+        const S = this.style;
+        if (S && S.walk) { p = S.walk(this, this.vx * this.face > 0 ? 1 : -1); break; }
         const ph = this.t * 0.22 * (this.vx * this.face > 0 ? 1 : -1);
         p = { ...POSES.idle, fh: 22 + Math.sin(ph) * 22, bh: -12 - Math.sin(ph) * 22, fk: 30 + Math.max(0, Math.cos(ph)) * 30, bk: 22 + Math.max(0, -Math.cos(ph)) * 30 };
         p.lean += 4; break;
@@ -680,7 +704,7 @@ class Fighter {
         if (t < 4) p = lerpPose(POSES.idle, POSES.jump, t / 4); else p = base;
         if (this.amv) {
           const m = this.amv, a = this.at;
-          if (m.keys) p = keyPose(m.keys, a, kickLeg(m));
+          if (m.keys) { p = keyPose(m.keys, a, kickLeg(m)); if (m.kx) p.sx *= m.kx(a); }
           else { const k = a < m.st ? easeOut(a / m.st) : 1; p = lerpPose({ ...p, rot: 0 }, POSES[m.pose], k); }
         }
         break;
@@ -689,11 +713,7 @@ class Fighter {
       case 'throw': p = this.tpose || POSES.grab; break;
       case 'held': p = this.heldPose || POSES.hit; break;
       case 'attack': {
-        const m = this.mv, base = POSES[m.base || 'idle'], strike = POSES[m.pose];
-        if (m.keys) p = keyPose(m.keys, t, kickLeg(m));
-        else if (t < m.st) p = lerpPose(base, strike, easeOut(t / m.st) * 0.85);
-        else if (t < m.st + m.ac) p = strike;
-        else p = lerpPose(strike, base, easeIn((t - m.st - m.ac) / m.rc));
+        p = normalPose(this.mv, t);
         break;
       }
       case 'hit': p = lerpPose(this.crouching ? POSES.chit : POSES.hit, this.crouching ? POSES.crouch : POSES.idle, clamp((t - this.stun * 0.5) / (this.stun * 0.5), 0, 1)); break;
@@ -704,6 +724,10 @@ class Fighter {
         const k = easeOut(t / 20);
         p = lerpPose({ ...POSES.down, rot: -90 }, POSES.crouch, k);
         if (ch.id === 'atlas') { p.rot = lerp(-90, -360, k); p.twist = (1 - k) * Math.PI; p.headSpin = (1 - k) * Math.PI * 2; } // roulade arrière contorsionniste
+        else if (ch.id === 't800') { // kip-up du « Rekbot » (vidéo REK) : jambes par-dessus la tête puis coup de reins
+          p = keyPose(T800_KIPUP, t);
+          this.vdy = 30 * Math.sin(clamp((t - 7) / 12, 0, 1) * Math.PI);
+        }
         break;
       }
       case 'win': { // célébration personnelle du robot (js/motions/<id>.js), sinon poses génériques

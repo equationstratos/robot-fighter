@@ -3,6 +3,7 @@
    Usage : node tools/move.js <robot[#skin]> <quoi> <sortie.png> [clé=valeur ...]
      quoi : intro | victory          animation personnelle sur l'écran de sélection (js/motions/<id>.js)
             win                      célébration en combat (état 'win' du Fighter)
+            getup                    relevé après une chute (état 'down' puis 'getup')
             lp | hp | lk | hk | flk | fhk | fhp | clk | chk | jlk | jhk ...   coup normal (clé de NORMALS)
             sp:<type>[:l|h]          coup spécial (clé de SPECIAL_MV, ex. sp:cyclone, sp:proj:h)
             su                       super
@@ -47,7 +48,7 @@ server.listen(0, '127.0.0.1', async () => {
   const menu = what === 'intro' || what === 'victory';
   const step = +(Q.step || (menu || what === 'win' ? 6 : 3)), n = +(Q.n || (menu || what === 'win' ? 30 : 24)), cols = +(Q.cols || 6);
   let input = Q.in || null;
-  if (!menu && !input && !/^(win|su|in)$/.test(what) && !what.startsWith('sp:')) { input = normalInput(what); if (!input) { console.error('coup inconnu: ' + what); process.exit(2); } }
+  if (!menu && !input && !/^(win|su|in|getup)$/.test(what) && !what.startsWith('sp:')) { input = normalInput(what); if (!input) { console.error('coup inconnu: ' + what); process.exit(2); } }
   const browser = await pw.chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   let code = 0;
   try {
@@ -91,6 +92,7 @@ server.listen(0, '127.0.0.1', async () => {
         F.camX = (a.x + b.x) / 2 - VIEW_W / 2; BTNS.forEach(k => { pads[0].held[k] = pads[0].pressed[k] = false; });
         for (let i = 0; i < 8; i++) F._upd();
         if (what === 'win') a.setSt('win');
+        else if (what === 'getup') { a.setSt('down'); a.ko = false; a.inv = 999; a.t = 34; } // relevé après une chute
       }, [what, +(Q.dist || 190)]);
       await raf();
       // cadre : autour du robot (monde : de x-200 à x+dist+60, du sol à 330 au-dessus)

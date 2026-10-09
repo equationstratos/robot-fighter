@@ -618,8 +618,11 @@ function moveRows(ch) {
     [ch.supName + ' (SUPER)', '↓↘→ ↓↘→ + P', 'SUPER']
   ];
 }
-// liste complète : spéciaux + projection + coups de pied de boxe française / MMA
+// liste complète : spéciaux + projection + coups de pied de boxe française / MMA (ou coups du style de combat du robot)
 function moveRowsFull(ch) {
+  const sty = typeof styleRows === 'function' ? styleRows(ch) : null;
+  if (sty) return moveRows(ch).concat([[(ch.throwName || 'PROJECTION') + ' (prise)', '→ ou ← + HP au contact', '']], sty)
+    .concat(ch.backElbow ? [['COUDE RETOURNÉ', 'LP, LP, HP (rapide)', '']] : []);
   return moveRows(ch).concat([
     [(ch.throwName || 'PROJECTION') + ' (prise)', '→ ou ← + HP au contact', ''],
     ['CHASSÉ LATÉRAL', '→ + LK', ''],
@@ -635,7 +638,8 @@ function drawMoveList(c, ch1, ch2) {
     c.fillStyle = 'rgba(10,14,30,.92)'; c.fillRect(x0, 56, w, 410); c.strokeStyle = ch.accent; c.lineWidth = 2; c.strokeRect(x0, 56, w, 410);
     c.drawImage(portrait(ch, 56), x0 + 12, 66);
     txt(ch.name, x0 + 80, 84, 16, { align: 'left', color: ch.accent });
-    txt(ch.maker, x0 + 80, 108, 10, { align: 'left', color: '#aaa' });
+    const sty = typeof styleOf === 'function' && styleOf(ch);
+    txt(ch.maker + (sty ? '  ·  STYLE : ' + sty.name : ''), x0 + 80, 108, 10, { align: 'left', color: '#aaa' });
     const rows = moveRowsFull(ch), dy = Math.min(40, 300 / Math.max(1, rows.length - 1));
     rows.forEach((r, j) => {
       const y = 146 + j * dy;
@@ -955,6 +959,8 @@ class SelectScene {
       const ch = this.chOf(0);
       c.fillStyle = 'rgba(5,10,25,.8)'; c.fillRect(W - 300, 74, 284, 200); c.strokeStyle = ch.accent; c.strokeRect(W - 300, 74, 284, 200);
       txt(ch.full, W - 284, 94, 10, { align: 'left', color: ch.accent });
+      const sty = typeof styleOf === 'function' && styleOf(ch);
+      if (sty) txt('STYLE : ' + sty.name, W - 30, 94, 8, { align: 'right', color: '#ffd23a' });
       wrapText(c, ch.bio, W - 284, 118, 252, 16, '11px ' + FONT_BIG, '#ddd');
       moveRows(ch).forEach((r, j) => { txt(r[0], W - 284, 186 + j * 30, 8, { align: 'left', color: '#ffd23a' }); txt(r[1], W - 284, 200 + j * 30, 10, { align: 'left', color: '#fff', font: FONT_BIG }); });
     }

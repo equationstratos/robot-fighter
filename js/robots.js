@@ -129,6 +129,7 @@ const ROSTER = [
     scale: 1.02, leg: 1.08, bulk: 0.96, chest: 1.0, speed: 1.06, power: 0.98, stage: 0,
     proj: { name: 'GIT PUSH', style: 'wave', color: '#ff7a1a', core: '#fff0e0' },
     move: 'flip', moveName: 'PULL REQUEST', sup: 'rush', supName: 'MERGE CONFLICT', throwType: 'suplex', throwName: 'SUDO SUPLEX',
+    style: 'muaythai', // style de combat (js/styles.js) : garde, marche et coups normaux de boxe thaïe
     bio: 'L\'humanoïde open source de Menlo Research, à monter soi-même (kit DIY). 1,2 m en vrai… 1,85 m en version combat.',
     skins: [ // ch.body = coques, ch.trim = détails (bagues, plaques), ch.joint = graphite — finitions : voir SKINS dans js/models/asimov.js
       { id: 'classic', name: 'ORIGINAL', sw: ['#e8641a', '#2a2b2e', '#0b0c0e', '#ff7a1a'] },
