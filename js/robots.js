@@ -114,17 +114,19 @@ const ROSTER = [
     move: 'uppercut', moveName: 'LIFT-OFF', sup: 'storm', supName: 'SATURN V STRIKE', throwType: 'suplex', throwName: 'SUPLEX ALLEMAND',
     bio: 'Né des recherches de la NASA. Force brute et fiabilité.' },
   { id: 'asimov', name: 'ASIMOV', full: 'Asimov v1', maker: 'MENLO RESEARCH', country: 'OPEN SOURCE', year: 2026,
-    body: '#3a4248', trim: '#c9a25a', joint: '#202428', accent: '#ffc845', visor: '#0c0e10', head: 'asimov',
+    body: '#e8641a', trim: '#e8641a', joint: '#2a2b2e', accent: '#ff7a1a', visor: '#050607', head: 'asimov',
     scale: 1.02, leg: 1.08, bulk: 0.96, chest: 1.0, speed: 1.06, power: 0.98, stage: 0,
-    proj: { name: 'GIT PUSH', style: 'wave', color: '#ffbf3a', core: '#fff4d6' },
+    proj: { name: 'GIT PUSH', style: 'wave', color: '#ff7a1a', core: '#fff0e0' },
     move: 'flip', moveName: 'PULL REQUEST', sup: 'rush', supName: 'MERGE CONFLICT', throwType: 'suplex', throwName: 'SUDO SUPLEX',
     bio: 'L\'humanoïde open source de Menlo Research, à monter soi-même (kit DIY). 1,2 m en vrai… 1,85 m en version combat.',
-    skins: [ // finitions / matières / lumières : voir SKINS dans js/models/asimov.js
-      { id: 'classic', name: 'ORIGINAL', sw: ['#3a4248', '#c9a25a', '#1c1f22', '#ffc845'] },
-      { id: 'proto', name: 'PROTOTYPE DIY', sw: ['#e4e2dc', '#b9bfc6', '#8d9196', '#36d2ff'],
-        ch: { body: '#e4e2dc', trim: '#b9bfc6', joint: '#8d9196', accent: '#36d2ff', proj: { name: 'GIT PUSH', style: 'wave', color: '#36d2ff', core: '#e6fbff' } } },
-      { id: 'hacker', name: 'HACKER', sw: ['#1b1c1f', '#2fd46a', '#0e0f10', '#3dff7a'],
-        ch: { body: '#1b1c1f', trim: '#2fd46a', joint: '#0e0f10', accent: '#3dff7a', proj: { name: 'GIT PUSH', style: 'wave', color: '#3dff7a', core: '#e8ffee' } } },
+    skins: [ // ch.body = coques, ch.trim = détails (bagues, plaques), ch.joint = graphite — finitions : voir SKINS dans js/models/asimov.js
+      { id: 'classic', name: 'ORIGINAL', sw: ['#e8641a', '#2a2b2e', '#0b0c0e', '#ff7a1a'] },
+      { id: 'noir', name: 'NOIR', sw: ['#1f2023', '#2a2b2e', '#e8641a', '#ff6a14'],
+        ch: { body: '#1f2023', trim: '#e8641a', joint: '#2a2b2e', accent: '#ff6a14', proj: { name: 'GIT PUSH', style: 'wave', color: '#ff6a14', core: '#ffeedd' } } },
+      { id: 'proto', name: 'PROTOTYPE DIY', sw: ['#e4e2dc', '#b9bfc6', '#4a4e54', '#36d2ff'],
+        ch: { body: '#e4e2dc', trim: '#b9bfc6', joint: '#4a4e54', accent: '#36d2ff', proj: { name: 'GIT PUSH', style: 'wave', color: '#36d2ff', core: '#e6fbff' } } },
+      { id: 'hacker', name: 'HACKER', sw: ['#1b1c1f', '#2fd46a', '#232427', '#3dff7a'],
+        ch: { body: '#1b1c1f', trim: '#2fd46a', joint: '#232427', accent: '#3dff7a', proj: { name: 'GIT PUSH', style: 'wave', color: '#3dff7a', core: '#e8ffee' } } },
       { id: 'cobalt', name: 'ANODISÉ COBALT', sw: ['#a3aab1', '#2f6cff', '#3a4046', '#5fb0ff'],
         ch: { body: '#a3aab1', trim: '#2f6cff', joint: '#3a4046', accent: '#5fb0ff', proj: { name: 'GIT PUSH', style: 'wave', color: '#4f9dff', core: '#e6f1ff' } } }
     ] }

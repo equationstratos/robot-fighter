@@ -54,8 +54,8 @@ Ouvrir `index.html` via un serveur web (ex. `python3 -m http.server`) puis jouer
 
 ## Robots 3D
 - Unitree H1, Apptronik Apollo et les jambes de Digit (Agility Cassie) utilisent les **maillages
-  officiels** des constructeurs publiés dans MuJoCo Menagerie, et Asimov ceux de son dépôt open source
-  `menloresearch/asimov-1` (voir `js/meshes/README.md` pour les sources et licences BSD-3 / Apache-2.0 / MIT /
-  CERN-OHL-S-2.0), convertis par `tools/mjcf2rk.py`.
-- Les autres robots sont modélisés à la main d'après des photos (`js/models/*.js`).
+  officiels** des constructeurs publiés dans MuJoCo Menagerie (voir `js/meshes/README.md` pour les
+  sources et licences BSD-3 / Apache-2.0 / MIT), convertis par `tools/mjcf2rk.py`.
+- Les autres robots sont modélisés à la main d'après des photos (`js/models/*.js`), dont Figure 02 et Asimov
+  (livrée orange et noir, skin NOIR).
 - `node tools/shoot.js <robot> sortie.png` produit une planche de prévisualisation d'un modèle.
