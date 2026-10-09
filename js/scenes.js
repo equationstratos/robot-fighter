@@ -813,7 +813,7 @@ function puppetFx(kind, ch, x, footY, sc, face) {
   else if (kind === 'rise') { AU.sfx('rush'); for (let i = 0; i < 18; i++) FX.add({ type: 'spark', x: x + rand(-30, 30) * sc, y: footY - rand(0, 160) * sc, vx: rand(-2, 2), vy: rand(-12, -5), size: 2.5, life: 16, max: 16, col: ch.accent, len: 3 }); dust(x, footY, 10); }
   else if (kind === 'burst') { AU.sfx('hitS'); explosion(x, footY - 110 * sc, ch.accent, 1.3); }
 }
-function sayName(ch) { AU.say(ch.name.replace('02', 'zero two').replace('H1', 'H one').replace('ASIMOV', 'Asimov'), 0.6, 0.95); }
+function sayName(ch) { AU.say(ch.name.replace('02', 'zero two').replace(/\b([HGR])1\b/, '$1 one').replace('ASIMOV', 'Asimov'), 0.6, 0.95); }
 const DEMOS = ch => (ch.id === 'atlas' ? ['contort'] : []).concat(['combo', 'special', ch.move === 'uppercut' ? 'uppercut' : ch.move, 'kick', 'backkick', 'taunt']);
 
 /* =================== SÉLECTION =================== */
@@ -897,7 +897,7 @@ class SelectScene {
     // robots avec plusieurs skins : 1re validation = choix du skin, 2e = prêt
     if (skinList(ROSTER[this.cur[p]]).length > 1 && !this.skinSel[p]) { this.skinSel[p] = true; this.plock[p] = 6; AU.sfx('select'); AU.say('Choose your skin', 0.5, 1.05); return; }
     this.skinSel[p] = false;
-    this.done[p] = true; AU.sfx('confirm'); sayName(ROSTER[this.cur[p]]); this.lock = 10;
+    this.done[p] = true; AU.sfx('confirm'); sayName(this.chOf(p)); this.lock = 10;
     this.pup[p].playMotion(this.chOf(p), 'victory');
     if (this.done[0] && this.done[1]) this.out = 1;
   }
